@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DeepResearch.Core\DeepResearch.Core.csproj" />
+  </ItemGroup>
+
 </Project>
