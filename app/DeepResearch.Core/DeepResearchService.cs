@@ -1,7 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using DeepResearch.Core.Clients;
+using DeepResearch.Core.Events;
 using System.Collections.Generic;
+using System;
 
 namespace DeepResearch.Core;
 
@@ -11,11 +13,18 @@ public class DeepResearchService
     private readonly IWebSearchClient _searchClient;
     private readonly int _maxLoops;
     private readonly int _maxTokensPerSource;
+    private readonly Action<ResearchProgress> _onProgressChanged;
 
-    public DeepResearchService(IAzureAIClient aiClient, IWebSearchClient searchClient, int maxLoops = 3, int maxTokensPerSource = 1000)
+    public DeepResearchService(
+        IAzureAIClient aiClient, 
+        IWebSearchClient searchClient, 
+        Action<ResearchProgress> onProgressChanged = null,
+        int maxLoops = 3, 
+        int maxTokensPerSource = 1000)
     {
         _aiClient = aiClient;
         _searchClient = searchClient;
+        _onProgressChanged = onProgressChanged;
         _maxLoops = maxLoops;
         _maxTokensPerSource = maxTokensPerSource;
     }
@@ -23,15 +32,34 @@ public class DeepResearchService
     public async Task<ResearchState> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
     {
         var state = new ResearchState { ResearchTopic = topic };
+        
         await GenerateQueryAsync(state, cancellationToken);
+        
         while (state.ResearchLoopCount < _maxLoops)
         {
+            // ルーティング通知
+            NotifyProgress(ProgressTypes.Routing, new { 
+                decision = "continue", 
+                loop_count = state.ResearchLoopCount 
+            });
+            
             await WebResearchAsync(state, cancellationToken);
             await SummarizeSourcesAsync(state, cancellationToken);
             await ReflectOnSummaryAsync(state, cancellationToken);
             state.ResearchLoopCount++;
         }
+        
+        // 最終化の通知
+        NotifyProgress(ProgressTypes.Routing, new { 
+            decision = "finalize", 
+            loop_count = state.ResearchLoopCount 
+        });
+        
         await FinalizeSummaryAsync(state, cancellationToken);
+        
+        // 完了通知
+        NotifyProgress(ProgressTypes.ResearchComplete, new { status = "complete" });
+        
         return state;
     }
 
@@ -44,11 +72,17 @@ public class DeepResearchService
             new Message { Role = "user", Content = "Generate a query for web search:" }
         };
         var result = await _aiClient.GetCompletionAsync(messages, cancellationToken);
-        // ここでJSONパースしてstate.SearchQuery, state.QueryRationaleをセット
-        // 例: { "query": "...", "rationale": "..." }
+        
+        // JSONパースしてstate.SearchQuery, state.QueryRationaleをセット
         var obj = System.Text.Json.JsonDocument.Parse(result).RootElement;
         state.SearchQuery = obj.GetProperty("query").GetString();
         state.QueryRationale = obj.GetProperty("rationale").GetString();
+        
+        // クライアントに通知
+        NotifyProgress(ProgressTypes.GenerateQuery, new { 
+            query = state.SearchQuery, 
+            rationale = state.QueryRationale 
+        });
     }
 
     private async Task WebResearchAsync(ResearchState state, CancellationToken cancellationToken = default)
@@ -57,6 +91,12 @@ public class DeepResearchService
         state.Images.AddRange(searchResult.Images);
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxTokensPerSource));
+        
+        // クライアントに通知
+        NotifyProgress(ProgressTypes.WebResearch, new { 
+            sources = searchResult.Results,
+            images = searchResult.Images 
+        });
     }
 
     private async Task SummarizeSourcesAsync(ResearchState state, CancellationToken cancellationToken = default)
@@ -78,6 +118,11 @@ public class DeepResearchService
         };
         var result = await _aiClient.GetCompletionAsync(messages, cancellationToken);
         state.RunningSummary = result.Trim();
+        
+        // クライアントに通知
+        NotifyProgress(ProgressTypes.Summarize, new { 
+            summary = state.RunningSummary 
+        });
     }
 
     private async Task ReflectOnSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
@@ -100,6 +145,12 @@ public class DeepResearchService
             state.SearchQuery = $"Tell me more about {state.ResearchTopic}";
             state.KnowledgeGap = "Unable to identify specific knowledge gap";
         }
+        
+        // クライアントに通知
+        NotifyProgress(ProgressTypes.Reflection, new { 
+            query = state.SearchQuery, 
+            knowledge_gap = state.KnowledgeGap 
+        });
     }
 
     private Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
@@ -135,6 +186,23 @@ public class DeepResearchService
             finalSummary += $"{source}\n";
         }
         state.RunningSummary = finalSummary;
+        
+        // クライアントに通知
+        NotifyProgress(ProgressTypes.Finalize, new { 
+            summary = state.RunningSummary 
+        });
+        
         return Task.CompletedTask;
+    }
+
+    // 進行状況通知のヘルパーメソッド
+    private void NotifyProgress(string type, object data)
+    {
+        _onProgressChanged?.Invoke(new ResearchProgress
+        {
+            Type = type,
+            Data = data,
+            Step = type
+        });
     }
 }
