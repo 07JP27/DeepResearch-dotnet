@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using DeepResearch.Core.Clients;
+
 public static class Formatting
 {
     /// <summary>
@@ -14,95 +16,45 @@ public static class Formatting
     /// <param name="maxTokensPerSource">各ソースの最大トークン数</param>
     /// <param name="fetchFullPage">全文を含めるかどうか</param>
     /// <returns>重複排除・整形済み文字列</returns>
+    // SearchResult型を受け取るオーバーロード
     public static string DeduplicateAndFormatSources(
-        object searchResponse,
+        SearchResult searchResult,
         int maxTokensPerSource,
         bool fetchFullPage = false)
     {
-        // sources_listの構築
-        List<Dictionary<string, object>> sourcesList = new();
-        if (searchResponse is Dictionary<string, object> dict && dict.ContainsKey("results"))
-        {
-            if (dict["results"] is IEnumerable<object> results)
-            {
-                foreach (var item in results)
-                {
-                    if (item is Dictionary<string, object> src)
-                        sourcesList.Add(src);
-                }
-            }
-        }
-        else if (searchResponse is IEnumerable<object> list)
-        {
-            foreach (var response in list)
-            {
-                if (response is Dictionary<string, object> d && d.ContainsKey("results"))
-                {
-                    if (d["results"] is IEnumerable<object> results)
-                    {
-                        foreach (var item in results)
-                        {
-                            if (item is Dictionary<string, object> src)
-                                sourcesList.Add(src);
-                        }
-                    }
-                }
-                else if (response is IEnumerable<object> sublist)
-                {
-                    foreach (var item in sublist)
-                    {
-                        if (item is Dictionary<string, object> src)
-                            sourcesList.Add(src);
-                    }
-                }
-            }
-        }
-        else
-        {
-            throw new ArgumentException("Input must be either a dict with 'results' or a list of search results");
-        }
+        if (searchResult == null || searchResult.Results == null)
+            return string.Empty;
 
         // URLで重複排除
-        var uniqueSources = new Dictionary<string, Dictionary<string, object>>();
-        foreach (var source in sourcesList)
+        var uniqueSources = new Dictionary<string, SearchResultItem>();
+        foreach (var source in searchResult.Results)
         {
-            if (source.TryGetValue("url", out var urlObj) && urlObj is string url)
+            if (!string.IsNullOrEmpty(source.Url) && !uniqueSources.ContainsKey(source.Url))
             {
-                if (!uniqueSources.ContainsKey(url))
-                {
-                    uniqueSources[url] = source;
-                }
+                uniqueSources[source.Url] = source;
             }
         }
 
-        // 整形
         var sb = new StringBuilder();
         sb.AppendLine("Sources:\n");
-        int i = 1;
         foreach (var source in uniqueSources.Values)
         {
-            string title = source.TryGetValue("title", out var t) && t is string ts ? ts : "(no title)";
-            string url = source.TryGetValue("url", out var u) && u is string us ? us : "(no url)";
-            string content = source.TryGetValue("content", out var c) && c is string cs ? cs : "";
+            string title = !string.IsNullOrEmpty(source.Title) ? source.Title : "(no title)";
+            string url = !string.IsNullOrEmpty(source.Url) ? source.Url : "(no url)";
+            string content = !string.IsNullOrEmpty(source.Content) ? source.Content : "";
             sb.AppendLine($"Source: {title}\n===");
             sb.AppendLine($"URL: {url}\n===");
             sb.AppendLine($"Most relevant content from source: {content}\n===");
             if (fetchFullPage)
             {
                 int charLimit = maxTokensPerSource * 4;
-                string rawContent = source.TryGetValue("raw_content", out var rc) && rc is string rcs ? rcs : "";
-                if (rawContent == null)
-                {
-                    rawContent = "";
-                    Console.WriteLine($"Warning: No raw_content found for source {url}");
-                }
+                string rawContent = !string.IsNullOrEmpty(source.RawContent) ? source.RawContent : "";
                 if (rawContent.Length > charLimit)
                 {
                     rawContent = rawContent.Substring(0, charLimit) + "... [truncated]";
                 }
                 sb.AppendLine($"Full source content limited to {maxTokensPerSource} tokens: {rawContent}\n");
             }
-            i++;
         }
         return sb.ToString().Trim();
     }
@@ -112,19 +64,17 @@ public static class Formatting
     /// </summary>
     /// <param name="searchResults">'results'キーを持つ検索レスポンス</param>
     /// <returns>"* title : url"形式の文字列</returns>
-    public static string FormatSources(Dictionary<string, object> searchResults)
+    // SearchResult型を受け取るオーバーロード
+    public static string FormatSources(SearchResult searchResult)
     {
-        if (!searchResults.TryGetValue("results", out var resultsObj) || resultsObj is not IEnumerable<object> results)
+        if (searchResult == null || searchResult.Results == null)
             return string.Empty;
         var lines = new List<string>();
-        foreach (var item in results)
+        foreach (var item in searchResult.Results)
         {
-            if (item is Dictionary<string, object> source)
-            {
-                string title = source.TryGetValue("title", out var t) && t is string ts ? ts : "(no title)";
-                string url = source.TryGetValue("url", out var u) && u is string us ? us : "(no url)";
-                lines.Add($"* {title} : {url}");
-            }
+            string title = !string.IsNullOrEmpty(item.Title) ? item.Title : "(no title)";
+            string url = !string.IsNullOrEmpty(item.Url) ? item.Url : "(no url)";
+            lines.Add($"* {title} : {url}");
         }
         return string.Join("\n", lines);
     }
