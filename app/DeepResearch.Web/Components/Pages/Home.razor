@@ -1,7 +1,287 @@
 ﻿@page "/"
+@using DeepResearch.Web.Services
+@using DeepResearch.Web.Hubs
+@using Microsoft.AspNetCore.SignalR.Client
+@inject WebResearchService ResearchService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Deep Research</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Deep Research</h1>
+                </div>
+            </div>
+        </div>
+    </header>
 
-Welcome to your new app.
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Research Input Form -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">調査トピックを入力してください</h2>
+            <div class="flex space-x-4">
+                <input @bind="researchTopic" 
+                       @onkeypress="OnKeyPress"
+                       placeholder="例: AIによる医療画像診断の最新動向"
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       disabled="@isResearching" />
+                <button @onclick="StartResearch" 
+                        disabled="@(isResearching || string.IsNullOrWhiteSpace(researchTopic))"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    @if (isResearching)
+                    {
+                        <span class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            調査中...
+                        </span>
+                    }
+                    else
+                    {
+                        <span>調査開始</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Display -->
+        @if (isResearching || researchSteps.Any())
+        {
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">調査進行状況</h3>
+                <div class="space-y-4">
+                    @foreach (var step in researchSteps)
+                    {
+                        <div class="border-l-4 @(GetStepBorderColor(step.Type)) pl-4 py-2">
+                            <div class="flex items-center mb-2">
+                                <span class="@(GetStepIconColor(step.Type)) mr-2">@GetStepIcon(step.Type)</span>
+                                <h4 class="font-medium text-gray-900">@GetStepTitle(step.Type)</h4>
+                                <span class="ml-auto text-sm text-gray-500">@step.Timestamp.ToString("HH:mm:ss")</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(step.Content))
+                            {
+                                <div class="text-gray-700 text-sm mt-2">
+                                    @((MarkupString)step.Content)
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Final Research Report -->
+        @if (!string.IsNullOrEmpty(finalReport))
+        {
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4">調査レポート</h3>
+                <div class="prose max-w-none">
+                    @((MarkupString)finalReport)
+                </div>
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private string researchTopic = "";
+    private bool isResearching = false;
+    private List<ResearchStep> researchSteps = new();
+    private string finalReport = "";
+    private string clientId = Guid.NewGuid().ToString();
+    private HubConnection? hubConnection;
+
+    public class ResearchStep
+    {
+        public string Type { get; set; } = "";
+        public string Content { get; set; } = "";
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/researchHub"))
+            .Build();
+
+        hubConnection.On<object>("ReceiveProgress", (message) =>
+        {
+            InvokeAsync(() => HandleProgressUpdate(message));
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("JoinGroup", clientId);
+    }
+
+    private async Task StartResearch()
+    {
+        if (string.IsNullOrWhiteSpace(researchTopic) || isResearching)
+            return;
+
+        isResearching = true;
+        researchSteps.Clear();
+        finalReport = "";
+        StateHasChanged();
+
+        try
+        {
+            await ResearchService.StartResearchAsync(researchTopic, clientId);
+        }
+        catch (Exception ex)
+        {
+            researchSteps.Add(new ResearchStep 
+            { 
+                Type = "error", 
+                Content = $"エラーが発生しました: {ex.Message}" 
+            });
+        }
+        finally
+        {
+            isResearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !isResearching && !string.IsNullOrWhiteSpace(researchTopic))
+        {
+            await StartResearch();
+        }
+    }
+
+    private Task HandleProgressUpdate(object message)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(message);
+        var doc = System.Text.Json.JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        var type = root.GetProperty("type").GetString() ?? "";
+        var data = root.GetProperty("data");
+
+        var content = "";
+        
+        switch (type)
+        {
+            case "thinking":
+                content = data.GetProperty("message").GetString() ?? "";
+                break;
+            case "generate_query":
+                var query = data.GetProperty("query").GetString() ?? "";
+                var rationale = data.GetProperty("rationale").GetString() ?? "";
+                content = $"<strong>検索クエリ:</strong> {query}<br><strong>根拠:</strong> {rationale}";
+                break;
+            case "web_research":
+                if (data.TryGetProperty("sources", out var sources))
+                {
+                    content = $"<strong>検索結果:</strong> {sources.GetArrayLength()} 件のソースを発見";
+                }
+                break;
+            case "summarize":
+                if (data.TryGetProperty("summary", out var summary))
+                {
+                    content = $"<strong>要約:</strong><br>{summary.GetString()}";
+                }
+                break;
+            case "reflection":
+                if (data.TryGetProperty("knowledge_gap", out var gap))
+                {
+                    content = $"<strong>知識ギャップ:</strong> {gap.GetString()}";
+                }
+                break;
+            case "finalize":
+                if (data.TryGetProperty("summary", out var finalSummary))
+                {
+                    finalReport = finalSummary.GetString() ?? "";
+                }
+                StateHasChanged();
+                return Task.CompletedTask;
+            case "research_complete":
+                if (data.TryGetProperty("final_summary", out var completeSummary))
+                {
+                    finalReport = completeSummary.GetString() ?? "";
+                }
+                content = "<strong>調査が完了しました！</strong>";
+                break;
+        }
+
+        if (!string.IsNullOrEmpty(content) || type == "research_complete")
+        {
+            researchSteps.Add(new ResearchStep { Type = type, Content = content });
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private string GetStepBorderColor(string type) => type switch
+    {
+        "thinking" => "border-yellow-400",
+        "generate_query" => "border-blue-400",
+        "web_research" => "border-purple-400",
+        "summarize" => "border-green-400",
+        "reflection" => "border-orange-400",
+        "finalize" => "border-indigo-400",
+        "research_complete" => "border-green-500",
+        "error" => "border-red-400",
+        _ => "border-gray-400"
+    };
+
+    private string GetStepIconColor(string type) => type switch
+    {
+        "thinking" => "text-yellow-500",
+        "generate_query" => "text-blue-500",
+        "web_research" => "text-purple-500",
+        "summarize" => "text-green-500",
+        "reflection" => "text-orange-500",
+        "finalize" => "text-indigo-500",
+        "research_complete" => "text-green-600",
+        "error" => "text-red-500",
+        _ => "text-gray-500"
+    };
+
+    private string GetStepIcon(string type) => type switch
+    {
+        "thinking" => "💭",
+        "generate_query" => "🔍",
+        "web_research" => "🌐",
+        "summarize" => "📝",
+        "reflection" => "🤔",
+        "finalize" => "📋",
+        "research_complete" => "✅",
+        "error" => "❌",
+        _ => "📄"
+    };
+
+    private string GetStepTitle(string type) => type switch
+    {
+        "thinking" => "思考中",
+        "generate_query" => "検索クエリ生成",
+        "web_research" => "Web検索",
+        "summarize" => "要約作成",
+        "reflection" => "反省・知識ギャップ分析",
+        "finalize" => "最終レポート作成",
+        "research_complete" => "調査完了",
+        "error" => "エラー",
+        _ => "処理中"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+
+@inject NavigationManager Navigation
