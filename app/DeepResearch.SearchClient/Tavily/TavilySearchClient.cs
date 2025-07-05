@@ -24,7 +24,7 @@ public class TavilySearchClient : ISearchClient
             var tavilyResult = await _tavilyClient.SearchAsync(
                 query: query,
                 maxResults: maxResults,
-                searchDepth: TavilySearchDepth.Advanced,
+                searchDepth: TavilySearchDepth.Basic,
                 includeRawContent: true,
                 includeImages: true,
                 cancellationToken: cancellationToken);

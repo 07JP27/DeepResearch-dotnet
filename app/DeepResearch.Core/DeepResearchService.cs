@@ -93,7 +93,6 @@ public class DeepResearchService
     {
         var searchResult = await _searchClient.SearchAsync(
             query: state.SearchQuery, 
-            maxResults: 10,
             cancellationToken: cancellationToken);
         state.Images.AddRange(searchResult.Images ?? new List<string>());
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
