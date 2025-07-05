@@ -1,28 +1,31 @@
 using System.Threading;
 using System.Threading.Tasks;
-using DeepResearch.Core.Clients;
+using DeepResearch.SearchClient.Tavily;
+using DeepResearch.SearchClient;
 using DeepResearch.Core.Events;
 using System.Collections.Generic;
 using System;
+using Azure.AI.OpenAI;
+using OpenAI.Chat;
 
 namespace DeepResearch.Core;
 
 public class DeepResearchService
 {
-    private readonly IAzureAIClient _aiClient;
-    private readonly IWebSearchClient _searchClient;
+    private readonly ChatClient _aiChatClient;
+    private readonly ISearchClient _searchClient;
     private readonly int _maxLoops;
     private readonly int _maxTokensPerSource;
     private readonly Action<ResearchProgress> _onProgressChanged;
 
     public DeepResearchService(
-        IAzureAIClient aiClient, 
-        IWebSearchClient searchClient, 
+        ChatClient aiChatClient, 
+        ISearchClient searchClient, 
         Action<ResearchProgress> onProgressChanged = null,
         int maxLoops = 3, 
         int maxTokensPerSource = 1000)
     {
-        _aiClient = aiClient;
+        _aiChatClient = aiChatClient;
         _searchClient = searchClient;
         _onProgressChanged = onProgressChanged;
         _maxLoops = maxLoops;
@@ -66,15 +69,16 @@ public class DeepResearchService
     private async Task GenerateQueryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
         var prompt = string.Format(Prompts.QueryWriterInstructions, Prompts.GetCurrentDate(), state.ResearchTopic);
-        var messages = new List<Message>
+        var messages = new List<ChatMessage>
         {
-            new Message { Role = "system", Content = prompt },
-            new Message { Role = "user", Content = "Generate a query for web search:" }
+            new SystemChatMessage(prompt),
+            new UserChatMessage("Generate a query for web search:")
         };
-        var result = await _aiClient.GetCompletionAsync(messages, cancellationToken);
-        
+        var result = await _aiChatClient.CompleteChatAsync(messages);
+        var textResult = result.Value.Content.First().Text;
+
         // JSONパースしてstate.SearchQuery, state.QueryRationaleをセット
-        var obj = System.Text.Json.JsonDocument.Parse(result).RootElement;
+        var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
         state.SearchQuery = obj.GetProperty("query").GetString();
         state.QueryRationale = obj.GetProperty("rationale").GetString();
         
@@ -87,8 +91,11 @@ public class DeepResearchService
 
     private async Task WebResearchAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
-        var searchResult = await _searchClient.SearchAsync(state.SearchQuery, 1, cancellationToken);
-        state.Images.AddRange(searchResult.Images);
+        var searchResult = await _searchClient.SearchAsync(
+            query: state.SearchQuery, 
+            maxResults: 10,
+            cancellationToken: cancellationToken);
+        state.Images.AddRange(searchResult.Images ?? new List<string>());
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxTokensPerSource));
         
@@ -111,13 +118,13 @@ public class DeepResearchService
         {
             humanMessage = $"<Context>\n{mostRecent}\n</Context>Create a Summary using the Context on this topic:\n<User Input>\n{state.ResearchTopic}\n</User Input>\n\n";
         }
-        var messages = new List<Message>
+        var messages = new List<ChatMessage>
         {
-            new Message { Role = "system", Content = Prompts.SummarizerInstructions },
-            new Message { Role = "user", Content = humanMessage }
+            new SystemChatMessage(Prompts.SummarizerInstructions),
+            new UserChatMessage(humanMessage)
         };
-        var result = await _aiClient.GetCompletionAsync(messages, cancellationToken);
-        state.RunningSummary = result.Trim();
+        var result = await _aiChatClient.CompleteChatAsync(messages);
+        state.RunningSummary = result.Value.Content.First().Text.Trim();
         
         // クライアントに通知
         NotifyProgress(ProgressTypes.Summarize, new { 
@@ -128,15 +135,16 @@ public class DeepResearchService
     private async Task ReflectOnSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
         var prompt = string.Format(Prompts.ReflectionInstructions, state.ResearchTopic);
-        var messages = new List<Message>
+        var messages = new List<ChatMessage>
         {
-            new Message { Role = "system", Content = prompt },
-            new Message { Role = "user", Content = $"Reflect on our existing knowledge: \n===\n{state.RunningSummary},\n===\nAnd now identify a knowledge gap and generate a follow-up web search query:" }
+            new SystemChatMessage(prompt),
+            new UserChatMessage($"Reflect on our existing knowledge: \n===\n{state.RunningSummary},\n===\nAnd now identify a knowledge gap and generate a follow-up web search query:")
         };
-        var result = await _aiClient.GetCompletionAsync(messages, cancellationToken);
+        var result = await _aiChatClient.CompleteChatAsync(messages);
+        var textResult = result.Value.Content.First().Text;
         try
         {
-            var obj = System.Text.Json.JsonDocument.Parse(result).RootElement;
+            var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
             state.SearchQuery = obj.GetProperty("follow_up_query").GetString();
             state.KnowledgeGap = obj.GetProperty("knowledge_gap").GetString();
         }

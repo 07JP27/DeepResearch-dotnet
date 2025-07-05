@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using DeepResearch.Core.Clients;
+using DeepResearch.SearchClient;
 
 public static class Formatting
 {
