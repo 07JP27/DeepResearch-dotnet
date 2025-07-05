@@ -14,12 +14,12 @@ public static class Prompts
         Your goal is to generate a targeted web search query.
 
         <CONTEXT>
-        Current date: {current_date}
+        Current date: {0}
         Please ensure your queries account for the most current information available as of this date.
         </CONTEXT>
 
         <TOPIC>
-        {research_topic}
+        {1}
         </TOPIC>
 
         <FORMAT>
@@ -71,7 +71,7 @@ public static class Prompts
         """;
 
     public static readonly string ReflectionInstructions = """
-        You are an expert research assistant analyzing a summary about {research_topic}.
+        You are an expert research assistant analyzing a summary about {0}.
 
         <GOAL>
         1. Identify knowledge gaps or areas that need deeper exploration
