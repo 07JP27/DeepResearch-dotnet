@@ -43,17 +43,17 @@ public class TavilyWebSearchClient : ISearchClient
 
             return searchResult;
         }
-        catch (TavilyInvalidApiKeyException ex)
+        catch (InvalidApiKeyException ex)
         {
-            throw new InvalidOperationException("Invalid Tavily API key", ex);
+            throw new InvalidOperationException("Invalid API key", ex);
         }
-        catch (TavilyUsageLimitExceededException ex)
+        catch (UsageLimitExceededException ex)
         {
-            throw new InvalidOperationException("Tavily usage limit exceeded", ex);
+            throw new InvalidOperationException("Usage limit exceeded", ex);
         }
-        catch (TavilyTimeoutException ex)
+        catch (RequestTimeoutException ex)
         {
-            throw new TimeoutException("Tavily request timed out", ex);
+            throw new TimeoutException("Request timed out", ex);
         }
         catch (Exception ex)
         {

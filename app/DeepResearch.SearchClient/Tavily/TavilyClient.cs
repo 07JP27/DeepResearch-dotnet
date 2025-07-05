@@ -28,7 +28,7 @@ public class TavilyClient : ITavilyClient
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         
         _apiKey = apiKey ?? Environment.GetEnvironmentVariable("TAVILY_API_KEY") ?? 
-                  throw new TavilyMissingApiKeyException();
+                  throw new MissingApiKeyException();
         
         _baseUrl = baseUrl ?? DefaultBaseUrl;
         
@@ -281,7 +281,7 @@ public class TavilyClient : ITavilyClient
         }
         catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw new TavilyTimeoutException(timeoutSeconds);
+            throw new RequestTimeoutException(timeoutSeconds);
         }
     }
 
@@ -311,10 +311,10 @@ public class TavilyClient : ITavilyClient
 
         return response.StatusCode switch
         {
-            System.Net.HttpStatusCode.Unauthorized => new TavilyInvalidApiKeyException(errorDetail),
-            System.Net.HttpStatusCode.Forbidden => new TavilyForbiddenException(errorDetail),
-            System.Net.HttpStatusCode.BadRequest => new TavilyBadRequestException(errorDetail),
-            System.Net.HttpStatusCode.TooManyRequests => new TavilyUsageLimitExceededException(errorDetail),
+            System.Net.HttpStatusCode.Unauthorized => new InvalidApiKeyException(errorDetail),
+            System.Net.HttpStatusCode.Forbidden => new ForbiddenException(errorDetail),
+            System.Net.HttpStatusCode.BadRequest => new BadRequestException(errorDetail),
+            System.Net.HttpStatusCode.TooManyRequests => new UsageLimitExceededException(errorDetail),
             _ => new HttpRequestException($"Request failed with status {response.StatusCode}: {errorDetail ?? responseContent}")
         };
     }

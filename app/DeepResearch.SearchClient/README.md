@@ -1,10 +1,16 @@
-# Tavily Client for C# (.NET)
+# DeepResearch.SearchClient
 
-This is a C# implementation of the Tavily API client, providing comprehensive web search and content extraction capabilities. This client is compatible with the existing `IWebSearchClient` interface used in the DeepResearch project.
+This library provides a unified search client interface (`ISearchClient`) and implementations for various web search services. Currently includes Tavily API client implementation, with support for additional search providers planned.
 
 ## Features
 
-The C# Tavily client supports all major Tavily API features:
+The search client library provides:
+
+- **Unified Interface**: `ISearchClient` for consistent search operations across different providers
+- **Tavily Implementation**: Comprehensive Tavily API client with advanced search capabilities
+- **Extensible Design**: Easy to add new search service implementations
+
+### Tavily Client Features
 
 - **Search**: Comprehensive web search with advanced filtering and result options
 - **Q&A Search**: Get direct answers to questions
@@ -15,7 +21,7 @@ The C# Tavily client supports all major Tavily API features:
 
 ## Installation
 
-The Tavily client is included in the `DeepResearch.Core` project. Make sure you have the following NuGet packages:
+This library is part of the DeepResearch project. Make sure you have the following NuGet packages:
 
 ```xml
 <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
@@ -23,20 +29,43 @@ The Tavily client is included in the `DeepResearch.Core` project. Make sure you 
 
 ## Quick Start
 
-### 1. Set up your API Key
+### Using the Unified Interface
 
-Set your Tavily API key as an environment variable:
-
-```bash
-export TAVILY_API_KEY="tvly-your-api-key-here"
-```
-
-Or pass it directly when creating the client.
-
-### 2. Basic Usage
+The recommended way to use search functionality is through the `ISearchClient` interface:
 
 ```csharp
-using DeepResearch.Core.Clients.Tavily;
+using DeepResearch.SearchClient;
+using DeepResearch.SearchClient.Tavily;
+
+// Create Tavily-based search client
+var httpClient = new HttpClient();
+var tavilyClient = new TavilyClient(httpClient);
+var searchClient = new TavilyWebSearchClient(tavilyClient);
+
+// Use the unified interface
+var result = await searchClient.SearchAsync(
+    "artificial intelligence trends 2024", 
+    maxResults: 10);
+
+Console.WriteLine($"Found {result.Results.Count} results");
+foreach (var item in result.Results)
+{
+    Console.WriteLine($"Title: {item.Title}");
+    Console.WriteLine($"URL: {item.Url}");
+    Console.WriteLine("---");
+}
+```
+
+### Using Tavily Client Directly
+
+For advanced Tavily-specific features, you can use the Tavily client directly:
+
+```csharp
+using DeepResearch.SearchClient.Tavily;
+
+// Set up your API Key
+Environment.SetEnvironmentVariable("TAVILY_API_KEY", "tvly-your-api-key-here");
+// Or pass it directly: new TavilyClient(httpClient, "your-api-key")
 
 // Create HTTP client and Tavily client
 var httpClient = new HttpClient();
@@ -58,26 +87,20 @@ foreach (var item in result.Results)
 }
 ```
 
-### 3. Using with IWebSearchClient Interface
-
-The Tavily client can be used as a drop-in replacement for any existing `IWebSearchClient` implementation:
-
-```csharp
-using DeepResearch.Core.Clients;
-using DeepResearch.Core.Clients.Tavily;
-
-// Create Tavily-based web search client
-var httpClient = new HttpClient();
-var tavilyClient = new TavilyClient(httpClient);
-var webSearchClient = new TavilyWebSearchClient(tavilyClient);
-
-// Use with existing DeepResearch service
-var service = new DeepResearchService(chatClient, webSearchClient);
-```
-
 ## API Reference
 
-### Search Methods
+### ISearchClient Interface
+
+The unified search interface provides a consistent API across different search providers:
+
+```csharp
+public interface ISearchClient
+{
+    Task<SearchResult> SearchAsync(string query, int maxResults = 5, CancellationToken cancellationToken = default);
+}
+```
+
+### Tavily-Specific Methods
 
 #### SearchAsync
 Performs a comprehensive web search with various filtering options.
@@ -180,30 +203,57 @@ var result = await tavilyClient.MapAsync(
 
 ## Error Handling
 
-The client provides specific exception types for different error conditions:
+When using `ISearchClient` implementations, standard .NET exceptions may be thrown:
+
+```csharp
+try
+{
+    var result = await searchClient.SearchAsync("query");
+}
+catch (InvalidOperationException ex)
+{
+    // Handle configuration or API key issues
+}
+catch (HttpRequestException ex)
+{
+    // Handle network-related errors
+}
+catch (TaskCanceledException ex)
+{
+    // Handle timeout errors
+}
+```
+
+### Search Client-Specific Exceptions
+
+When using search clients directly, you can catch provider-specific exceptions:
 
 ```csharp
 try
 {
     var result = await tavilyClient.SearchAsync("query");
 }
-catch (TavilyInvalidApiKeyException)
+catch (MissingApiKeyException)
+{
+    // Handle missing API key
+}
+catch (InvalidApiKeyException)
 {
     // Handle invalid API key
 }
-catch (TavilyUsageLimitExceededException)
+catch (UsageLimitExceededException)
 {
     // Handle usage limit exceeded
 }
-catch (TavilyTimeoutException)
+catch (RequestTimeoutException)
 {
     // Handle request timeout
 }
-catch (TavilyBadRequestException)
+catch (BadRequestException)
 {
     // Handle bad request
 }
-catch (TavilyForbiddenException)
+catch (ForbiddenException)
 {
     // Handle forbidden access
 }
@@ -211,29 +261,15 @@ catch (TavilyForbiddenException)
 
 ## Dependency Injection
 
-For applications using dependency injection:
+For applications using dependency injection, you can register the search clients:
 
 ```csharp
+// Register Tavily as the search client implementation
 services.AddHttpClient<TavilyClient>();
 services.AddScoped<ITavilyClient, TavilyClient>();
-services.AddScoped<IWebSearchClient, TavilyWebSearchClient>();
+services.AddScoped<ISearchClient, TavilyWebSearchClient>();
+
+// Or register multiple implementations if needed
+services.AddScoped<TavilyWebSearchClient>();
+// services.AddScoped<OtherSearchClient>(); // Future implementations
 ```
-
-## Running the Demo
-
-To see the Tavily client in action, run the demo:
-
-```bash
-# Set your API key
-export TAVILY_API_KEY="tvly-your-api-key-here"
-
-# Run the demo
-dotnet run --project DeepResearch.Console -- --tavily-demo
-```
-
-The demo showcases:
-1. Basic web search
-2. Q&A search for direct answers
-3. Context generation for RAG applications
-4. Integration with IWebSearchClient interface
-5. Content extraction from URLs
