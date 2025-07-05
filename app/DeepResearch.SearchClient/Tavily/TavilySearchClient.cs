@@ -3,15 +3,15 @@ namespace DeepResearch.SearchClient.Tavily;
 /// <summary>
 /// Web search client implementation using Tavily API
 /// </summary>
-public class TavilyWebSearchClient : ISearchClient
+public class TavilySearchClient : ISearchClient
 {
     private readonly ITavilyClient _tavilyClient;
 
     /// <summary>
-    /// Initializes a new instance of the TavilyWebSearchClient
+    /// Initializes a new instance of the TavilySearchClient
     /// </summary>
     /// <param name="tavilyClient">Tavily client instance</param>
-    public TavilyWebSearchClient(ITavilyClient tavilyClient)
+    public TavilySearchClient(ITavilyClient tavilyClient)
     {
         _tavilyClient = tavilyClient ?? throw new ArgumentNullException(nameof(tavilyClient));
     }

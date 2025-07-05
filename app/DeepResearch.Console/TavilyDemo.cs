@@ -68,7 +68,7 @@ public class TavilyDemo
                 services.AddScoped<ITavilyClient, TavilyClient>();
                 
                 // Register unified search client
-                services.AddScoped<ISearchClient, TavilyWebSearchClient>();
+                services.AddScoped<ISearchClient, TavilySearchClient>();
                 
                 // Register demo
                 services.AddScoped<TavilyDemo>();

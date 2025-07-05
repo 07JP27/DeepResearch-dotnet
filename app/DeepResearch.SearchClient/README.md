@@ -40,7 +40,7 @@ using DeepResearch.SearchClient.Tavily;
 // Create Tavily-based search client
 var httpClient = new HttpClient();
 var tavilyClient = new TavilyClient(httpClient);
-var searchClient = new TavilyWebSearchClient(tavilyClient);
+var searchClient = new TavilySearchClient(tavilyClient);
 
 // Use the unified interface
 var result = await searchClient.SearchAsync(
@@ -267,9 +267,9 @@ For applications using dependency injection, you can register the search clients
 // Register Tavily as the search client implementation
 services.AddHttpClient<TavilyClient>();
 services.AddScoped<ITavilyClient, TavilyClient>();
-services.AddScoped<ISearchClient, TavilyWebSearchClient>();
+services.AddScoped<ISearchClient, TavilySearchClient>();
 
 // Or register multiple implementations if needed
-services.AddScoped<TavilyWebSearchClient>();
+services.AddScoped<TavilySearchClient>();
 // services.AddScoped<OtherSearchClient>(); // Future implementations
 ```
