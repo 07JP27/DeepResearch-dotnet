@@ -1,3 +1,5 @@
+[English is here ](README.md)
+
 # DeepResearch.SearchClient
 
 このライブラリは、さまざまな Web 検索サービス向けの統一検索クライアントインターフェース（`ISearchClient`）とその実装を提供します。

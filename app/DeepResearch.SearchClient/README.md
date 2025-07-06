@@ -1,3 +1,5 @@
+[日本語はこちら](README_ja.md)
+
 # DeepResearch.SearchClient
 
 This library provides a unified search client interface (`ISearchClient`) and its implementations for various web search services. Currently, it includes the Tavily API client implementation.
