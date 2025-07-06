@@ -2,6 +2,7 @@
 @using DeepResearch.Core.Events
 @using System.Text.Json
 @using DeepResearch.Web.Services
+@using Markdig
 @inject IJSRuntime JSRuntime
 @inject HttpClient HttpClient
 @inject WebResearchService _researchService
@@ -112,7 +113,7 @@
                 }
 
                 <div class="prose max-w-none">
-                    @((MarkupString)finalReport)
+                    @((MarkupString)(!string.IsNullOrEmpty(finalReport) ? Markdown.ToHtml(finalReport) : ""))
                 </div>
             </div>
         }
@@ -178,7 +179,7 @@
                 var webResearchProgress = DeserializeProgressData<WebResearchProgress>(message);
                 if (webResearchProgress != null)
                 {
-                    content = $"<strong>検索クエリ:</strong> {webResearchProgress.SearchWords} <br><strong>検索結果:</strong> {webResearchProgress.Sources.Count} 件のソースを発見";
+                    content = $"<strong>検索結果:</strong> {webResearchProgress.Sources.Count} 件のソースを発見";
                 }
                 break;
                 
@@ -200,7 +201,7 @@
                 var reflectionProgress = DeserializeProgressData<ReflectionProgress>(message);
                 if (reflectionProgress != null)
                 {
-                    content = $"<strong>知識ギャップ:</strong> {reflectionProgress.KnowledgeGap}<br><strong>次の検索:</strong> {reflectionProgress.Query}";
+                    content = $"<strong>知識ギャップ:</strong> {reflectionProgress.KnowledgeGap}<br><strong>次の検索クエリ:</strong> {reflectionProgress.Query}";
                 }
                 break;
                 

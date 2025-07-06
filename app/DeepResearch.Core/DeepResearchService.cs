@@ -40,7 +40,6 @@ public class DeepResearchService
 
         while (state.ResearchLoopCount < _maxLoops)
         {
-            // ルーティング通知
             NotifyProgress(new RoutingProgress
             {
                 Decision = "continue",
@@ -53,7 +52,6 @@ public class DeepResearchService
             state.ResearchLoopCount++;
         }
 
-        // 最終化通知
         NotifyProgress(new RoutingProgress
         {
             Decision = "finalize",
@@ -62,7 +60,6 @@ public class DeepResearchService
 
         await FinalizeSummaryAsync(state, cancellationToken);
 
-        // 完了通知
         NotifyProgress(new ResearchCompleteProgress
         {
             Status = "complete"
@@ -82,12 +79,10 @@ public class DeepResearchService
         var result = await _aiChatClient.CompleteChatAsync(messages);
         var textResult = result.Value.Content.First().Text;
 
-        // JSONパースしてstate.SearchQuery, state.QueryRationaleをセット
         var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
         state.SearchQuery = obj.GetProperty("query").GetString() ?? "";
         state.QueryRationale = obj.GetProperty("rationale").GetString() ?? "";
 
-        // 通知
         NotifyProgress(new QueryGenerationProgress
         {
             Query = state.SearchQuery,
@@ -105,10 +100,8 @@ public class DeepResearchService
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxTokensPerSource));
 
-        // 通知
         NotifyProgress(new WebResearchProgress
         {
-            SearchWords = state.SearchQuery,
             Sources = searchResult.Results,
             Images = searchResult.Images ?? new List<string>()
         });
@@ -134,7 +127,6 @@ public class DeepResearchService
         var result = await _aiChatClient.CompleteChatAsync(messages);
         state.RunningSummary = result.Value.Content.First().Text.Trim();
 
-        // 通知
         NotifyProgress(new SummarizeProgress
         {
             Summary = state.RunningSummary
@@ -163,7 +155,6 @@ public class DeepResearchService
             state.KnowledgeGap = "Unable to identify specific knowledge gap";
         }
 
-        // 通知
         NotifyProgress(new ReflectionProgress
         {
             Query = state.SearchQuery,
@@ -173,7 +164,6 @@ public class DeepResearchService
 
     private Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
-        // テキストベースの最終まとめ（画像の描画はクライアント側の責任）
         var finalSummary = $"## Summary\n{state.RunningSummary}\n\n### Sources:\n";
         foreach (var source in state.SourcesGathered)
         {
@@ -181,7 +171,6 @@ public class DeepResearchService
         }
         state.RunningSummary = finalSummary;
 
-        // 通知
         NotifyProgress(new FinalizeProgress
         {
             Summary = state.RunningSummary,
@@ -191,7 +180,6 @@ public class DeepResearchService
         return Task.CompletedTask;
     }
 
-    // 型安全な進行状況通知のヘルパーメソッド
     private void NotifyProgress(ProgressBase progress)
     {
         _onProgressChanged?.Invoke(progress);

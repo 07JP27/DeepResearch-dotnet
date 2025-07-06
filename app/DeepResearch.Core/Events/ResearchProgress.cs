@@ -3,7 +3,6 @@ using DeepResearch.SearchClient;
 
 namespace DeepResearch.Core.Events;
 
-// 基底クラス
 public abstract class ProgressBase
 {
     protected ProgressBase(string type)
@@ -14,11 +13,9 @@ public abstract class ProgressBase
     public string Type { get; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-    // 後方互換性のため
     public string Step => Type;
 }
 
-// クエリ生成プログレス
 public class QueryGenerationProgress : ProgressBase
 {
     public QueryGenerationProgress() : base(ProgressTypes.GenerateQuery)
@@ -29,19 +26,16 @@ public class QueryGenerationProgress : ProgressBase
     public string Rationale { get; set; } = string.Empty;
 }
 
-// ウェブ検索プログレス
 public class WebResearchProgress : ProgressBase
 {
     public WebResearchProgress() : base(ProgressTypes.WebResearch)
     {
     }
 
-    public string SearchWords { get; set; } = string.Empty;
     public List<SearchResultItem> Sources { get; set; } = new();
     public List<string> Images { get; set; } = new();
 }
 
-// 要約プログレス
 public class SummarizeProgress : ProgressBase
 {
     public SummarizeProgress() : base(ProgressTypes.Summarize)
@@ -51,7 +45,6 @@ public class SummarizeProgress : ProgressBase
     public string Summary { get; set; } = string.Empty;
 }
 
-// リフレクションプログレス
 public class ReflectionProgress : ProgressBase
 {
     public ReflectionProgress() : base(ProgressTypes.Reflection)
@@ -62,7 +55,6 @@ public class ReflectionProgress : ProgressBase
     public string KnowledgeGap { get; set; } = string.Empty;
 }
 
-// 最終化プログレス
 public class FinalizeProgress : ProgressBase
 {
     public FinalizeProgress() : base(ProgressTypes.Finalize)
@@ -73,7 +65,6 @@ public class FinalizeProgress : ProgressBase
     public List<string> Images { get; set; } = new();
 }
 
-// ルーティングプログレス
 public class RoutingProgress : ProgressBase
 {
     public RoutingProgress() : base(ProgressTypes.Routing)
@@ -84,7 +75,6 @@ public class RoutingProgress : ProgressBase
     public int LoopCount { get; set; }
 }
 
-// 研究完了プログレス
 public class ResearchCompleteProgress : ProgressBase
 {
     public ResearchCompleteProgress() : base(ProgressTypes.ResearchComplete)
@@ -96,7 +86,6 @@ public class ResearchCompleteProgress : ProgressBase
     public List<string> Images { get; set; } = new();
 }
 
-// 思考中プログレス
 public class ThinkingProgress : ProgressBase
 {
     public ThinkingProgress() : base(ProgressTypes.Thinking)
@@ -106,7 +95,6 @@ public class ThinkingProgress : ProgressBase
     public string Message { get; set; } = string.Empty;
 }
 
-// エラープログレス
 public class ErrorProgress : ProgressBase
 {
     public ErrorProgress() : base("error")
