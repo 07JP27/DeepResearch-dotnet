@@ -27,8 +27,5 @@ internal static partial class Prompts
             "Rationale": "Understanding the fundamental structure of transformer models"
         }}
         </EXAMPLE>
-
-        Provide your response in JSON format. Do not include any tags or backticks. Only return
-        Json like in the example:
         """;
 }
