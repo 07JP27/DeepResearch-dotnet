@@ -50,10 +50,16 @@ public class WebResearchService
 
             NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
 
+            var reseachOption = new DeepResearchOptions
+            {
+                MaxSourceCountPerSearch = 2,
+            };
+
             var researchService = new DeepResearchService(
                 _chatClient,
                 _searchClient,
-                progress => OnProgressChanged(progress).Wait()
+                progress => OnProgressChanged(progress).Wait(),
+                reseachOption
             );
 
             await researchService.RunResearchAsync(topic, cancellationToken);

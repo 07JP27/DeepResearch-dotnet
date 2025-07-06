@@ -14,18 +14,40 @@
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
+    <header class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <h1 class="text-xl font-semibold text-gray-900">Deep Research</h1>
                 </div>
+                @if (isResearching)
+                {
+                    <div class="flex items-center text-sm text-gray-600">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg"
+                            fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        調査中...
+                    </div>
+                }
             </div>
         </div>
+        
+        <!-- Progress Bar -->
+        @if (isResearching)
+        {
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
+                <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 animate-pulse"></div>
+            </div>
+        }
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         <!-- Research Input Form -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-4">調査トピックを入力してください</h2>
@@ -254,7 +276,7 @@
         {
             await JSRuntime.InvokeVoidAsync("scrollToBottom");
         }
-        catch (Exception ex)
+        catch
         {
             // 処理上は特に問題ないため何もしない
         }
