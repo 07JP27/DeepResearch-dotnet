@@ -57,7 +57,8 @@ public class WebResearchService
             NotifyClient(clientId, "research_complete", new
             {
                 status = "complete",
-                final_summary = result.RunningSummary
+                final_summary = result.RunningSummary,
+                images = result.Images
             });
         }
         catch (Exception ex)

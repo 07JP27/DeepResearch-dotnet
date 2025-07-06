@@ -3,6 +3,7 @@ using DeepResearch.Core.Events;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using System.Linq;
 
 // dotnet runで実行する場合は以下の環境変数を設定してください
 // export TAVILY_API_KEY="your-tavily-api-key-here"
@@ -70,6 +71,29 @@ void OnProgressChanged(ResearchProgress progress)
 
         case ProgressTypes.Finalize:
             Console.WriteLine($"[{timestamp}] ✅ 最終レポートを作成中...");
+            if (progress.Data is System.Text.Json.JsonElement finalizeJson &&
+                finalizeJson.TryGetProperty("images", out var imagesElement) &&
+                imagesElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                var imageUrls = new List<string>();
+                foreach (var imageElement in imagesElement.EnumerateArray())
+                {
+                    var imageUrl = imageElement.GetString();
+                    if (!string.IsNullOrEmpty(imageUrl))
+                    {
+                        imageUrls.Add(imageUrl);
+                    }
+                }
+
+                if (imageUrls.Any())
+                {
+                    Console.WriteLine($"  → 画像が見つかりました ({imageUrls.Count}枚):");
+                    for (int i = 0; i < imageUrls.Count; i++)
+                    {
+                        Console.WriteLine($"    {i + 1}. {imageUrls[i]}");
+                    }
+                }
+            }
             break;
 
         case ProgressTypes.ResearchComplete:

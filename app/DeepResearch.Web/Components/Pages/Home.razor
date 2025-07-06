@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using DeepResearch.Core.Events
+@using System.Text.Json
 @inject IJSRuntime JSRuntime
 @inject HttpClient HttpClient
 @inject NavigationManager Navigation
@@ -84,6 +85,33 @@
         {
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="text-2xl font-semibold text-gray-900 mb-4">調査レポート</h3>
+
+                <!-- Images Section -->
+                @if (finalImages.Any())
+                {
+                    <div class="mb-6">
+                        @if (finalImages.Count >= 2)
+                        {
+                            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                                <div class="w-full md:w-1/2">
+                                    <img src="@finalImages[0]" alt="Research image 1" class="w-full h-auto rounded-lg shadow-md" />
+                                </div>
+                                <div class="w-full md:w-1/2">
+                                    <img src="@finalImages[1]" alt="Research image 2" class="w-full h-auto rounded-lg shadow-md" />
+                                </div>
+                            </div>
+                        }
+                        else if (finalImages.Count == 1)
+                        {
+                            <div class="flex justify-center mb-6">
+                                <div class="w-full max-w-lg">
+                                    <img src="@finalImages[0]" alt="Research image" class="w-full h-auto rounded-lg shadow-md" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
                 <div class="prose max-w-none">
                     @((MarkupString)finalReport)
                 </div>
@@ -97,6 +125,7 @@
     private bool isResearching = false;
     private List<ResearchStep> researchSteps = new();
     private string finalReport = "";
+    private List<string> finalImages = new();
     private string clientId = Guid.NewGuid().ToString();
     private Timer? pollingTimer;
     private int lastProgressCount = 0;
@@ -265,11 +294,35 @@
                 {
                     finalReport = finalSummary.GetString() ?? "";
                 }
+                if (data.TryGetProperty("images", out var imagesJson) && imagesJson.ValueKind == JsonValueKind.Array)
+                {
+                    finalImages.Clear();
+                    foreach (var imageElement in imagesJson.EnumerateArray())
+                    {
+                        var imageUrl = imageElement.GetString();
+                        if (!string.IsNullOrEmpty(imageUrl))
+                        {
+                            finalImages.Add(imageUrl);
+                        }
+                    }
+                }
                 return Task.CompletedTask;
             case ProgressTypes.ResearchComplete:
                 if (data.TryGetProperty("final_summary", out var completeSummary))
                 {
                     finalReport = completeSummary.GetString() ?? "";
+                }
+                if (data.TryGetProperty("images", out var completeImagesJson) && completeImagesJson.ValueKind == JsonValueKind.Array)
+                {
+                    finalImages.Clear();
+                    foreach (var imageElement in completeImagesJson.EnumerateArray())
+                    {
+                        var imageUrl = imageElement.GetString();
+                        if (!string.IsNullOrEmpty(imageUrl))
+                        {
+                            finalImages.Add(imageUrl);
+                        }
+                    }
                 }
                 content = "<strong>調査が完了しました！</strong>";
                 break;
@@ -368,3 +421,4 @@
         public DateTime Timestamp { get; set; }
     }
 }
+    

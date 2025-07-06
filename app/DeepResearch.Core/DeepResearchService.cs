@@ -169,42 +169,19 @@ public class DeepResearchService
 
     private Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
-        // 画像やソースを含めた最終まとめ
-        var imageSection = "";
-        if (state.Images.Count >= 2)
-        {
-            imageSection = string.Concat(
-                "<div class='flex flex-col md:flex-row gap-4 mb-6'>",
-                "<div class='w-full md:w-1/2'>",
-                $"<img src='{state.Images[0]}' alt='Research image 1' class='w-full h-auto rounded-lg shadow-md'>",
-                "</div>",
-                "<div class='w-full md:w-1/2'>",
-                $"<img src='{state.Images[1]}' alt='Research image 2' class='w-full h-auto rounded-lg shadow-md'>",
-                "</div>",
-                "</div>\n"
-            );
-        }
-        else if (state.Images.Count == 1)
-        {
-            imageSection = string.Concat(
-                "<div class='flex justify-center mb-6'>",
-                "<div class='w-full max-w-lg'>",
-                $"<img src='{state.Images[0]}' alt='Research image' class='w-full h-auto rounded-lg shadow-md'>",
-                "</div>",
-                "</div>\n"
-            );
-        }
-        var finalSummary = $"{imageSection}## Summary\n{state.RunningSummary}\n\n### Sources:\n";
+        // テキストベースの最終まとめ（画像の描画はクライアント側の責任）
+        var finalSummary = $"## Summary\n{state.RunningSummary}\n\n### Sources:\n";
         foreach (var source in state.SourcesGathered)
         {
             finalSummary += $"{source}\n";
         }
         state.RunningSummary = finalSummary;
 
-        // クライアントに通知
+        // クライアントに通知（画像URLも含める）
         NotifyProgress(ProgressTypes.Finalize, new
         {
-            summary = state.RunningSummary
+            summary = state.RunningSummary,
+            images = state.Images
         });
 
         return Task.CompletedTask;
