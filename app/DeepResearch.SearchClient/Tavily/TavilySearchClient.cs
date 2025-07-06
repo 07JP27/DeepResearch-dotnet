@@ -17,7 +17,7 @@ public class TavilySearchClient : ISearchClient
     }
 
     /// <inheritdoc />
-    public async Task<SearchResult> SearchAsync(string query, int maxResults = 5, CancellationToken cancellationToken = default)
+    public async Task<SearchResult> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
     {
         try
         {

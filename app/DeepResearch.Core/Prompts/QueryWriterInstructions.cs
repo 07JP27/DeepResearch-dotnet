@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace DeepResearch.Core;
+﻿namespace DeepResearch.Core;
 
 internal static partial class Prompts
 {

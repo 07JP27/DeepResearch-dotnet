@@ -1,11 +1,8 @@
-namespace DeepResearch.Core;
-
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-
 using DeepResearch.SearchClient;
+
+namespace DeepResearch.Core;
 
 internal static class Formatting
 {

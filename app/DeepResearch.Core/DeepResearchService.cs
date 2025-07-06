@@ -1,12 +1,6 @@
-using System.Threading;
-using System.Threading.Tasks;
-using DeepResearch.SearchClient.Tavily;
 using DeepResearch.SearchClient;
 using DeepResearch.Core.Models;
 using DeepResearch.Core.JsonSchema;
-using System.Collections.Generic;
-using System;
-using Azure.AI.OpenAI;
 using OpenAI.Chat;
 using System.Text.Json;
 
@@ -18,6 +12,8 @@ public class DeepResearchService
     private readonly ISearchClient _searchClient;
     private readonly int _maxLoops;
     private readonly int _maxTokensPerSource;
+    private readonly int _maxSourceCountPerSearch;
+
     private readonly Action<ProgressBase>? _onProgressChanged;
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -39,14 +35,16 @@ public class DeepResearchService
         ChatClient aiChatClient,
         ISearchClient searchClient,
         Action<ProgressBase>? onProgressChanged = null,
-        int maxLoops = 3,
-        int maxTokensPerSource = 1000)
+        DeepResearchOptions? options = null)
     {
         _aiChatClient = aiChatClient;
         _searchClient = searchClient;
         _onProgressChanged = onProgressChanged;
-        _maxLoops = maxLoops;
-        _maxTokensPerSource = maxTokensPerSource;
+
+        options ??= new DeepResearchOptions();
+        _maxLoops = options.MaxResearchLoops;
+        _maxTokensPerSource = options.MaxTokensPerSource;
+        _maxSourceCountPerSearch = options.MaxSourceCountPerSearch;
     }
 
     public async Task<ResearchState> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
@@ -115,7 +113,7 @@ public class DeepResearchService
     {
         var searchResult = await _searchClient.SearchAsync(
             query: state.SearchQuery,
-            maxResults: 2,
+            maxResults: _maxSourceCountPerSearch,
             cancellationToken: cancellationToken);
         state.Images.AddRange(searchResult.Images ?? new List<string>());
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));

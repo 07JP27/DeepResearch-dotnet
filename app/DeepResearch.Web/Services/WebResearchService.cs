@@ -32,13 +32,13 @@ public class WebResearchService
             // 設定チェック
             if (_chatClient == null)
             {
-                NotifyClient(new ErrorProgress { Message = "Azure OpenAI設定が不完全です。appsettings.jsonを確認してください。" });
+                NotifyClient(new ErrorProgress { Message = "Azure OpenAI設定が不完全です。" });
                 return;
             }
 
             if (_searchClient == null)
             {
-                NotifyClient(new ErrorProgress { Message = "Tavily API設定が不完全です。appsettings.jsonを確認してください。" });
+                NotifyClient(new ErrorProgress { Message = "Tavily API設定が不完全です。" });
                 return;
             }
 
@@ -53,9 +53,7 @@ public class WebResearchService
             var researchService = new DeepResearchService(
                 _chatClient,
                 _searchClient,
-                progress => OnProgressChanged(progress).Wait(),
-                maxLoops: 3,
-                maxTokensPerSource: 1000
+                progress => OnProgressChanged(progress).Wait()
             );
 
             await researchService.RunResearchAsync(topic, cancellationToken);

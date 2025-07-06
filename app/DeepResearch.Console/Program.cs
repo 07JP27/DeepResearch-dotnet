@@ -94,7 +94,14 @@ void OnProgressChanged(ProgressBase progress)
     }
 }
 
-var service = new DeepResearchService(ChatClient, searchClient, OnProgressChanged);
+var options = new DeepResearchOptions
+{
+    MaxResearchLoops = 3, // 最大ループ数
+    MaxTokensPerSource = 1000, // ソースごとの最大トークン数
+    MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
+};
+
+var service = new DeepResearchService(ChatClient, searchClient, OnProgressChanged, options);
 var result = await service.RunResearchAsync(researchTopic, CancellationToken.None);
 
 Console.WriteLine("\n" + new string('=', 50));

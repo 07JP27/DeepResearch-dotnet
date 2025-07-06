@@ -1,4 +1,3 @@
-
 # DeepResearch.SearchClient
 
 This library provides a unified search client interface (`ISearchClient`) and its implementations for various web search services. Currently, it includes the Tavily API client implementation.
@@ -53,7 +52,7 @@ The unified search interface provides a consistent API across different search p
 ```csharp
 public interface ISearchClient
 {
-    Task<SearchResult> SearchAsync(string query, int maxResults = 5, CancellationToken cancellationToken = default);
+    Task<SearchResult> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default);
 }
 ```
 
