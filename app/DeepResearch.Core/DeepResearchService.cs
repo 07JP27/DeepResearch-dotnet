@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DeepResearch.SearchClient.Tavily;
 using DeepResearch.SearchClient;
-using DeepResearch.Core.Events;
+using DeepResearch.Core.Models;
 using System.Collections.Generic;
 using System;
 using Azure.AI.OpenAI;
@@ -70,7 +70,7 @@ public class DeepResearchService
 
     private async Task GenerateQueryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
-        var prompt = string.Format(Prompts.QueryWriterInstructions, Prompts.GetCurrentDate(), state.ResearchTopic);
+        var prompt = string.Format(Prompts.QueryWriterInstructions, DateTime.Now.ToString("MMMM dd, yyyy"), state.ResearchTopic);
         var messages = new List<ChatMessage>
         {
             new SystemChatMessage(prompt),

@@ -1,5 +1,5 @@
 ﻿using DeepResearch.Core;
-using DeepResearch.Core.Events;
+using DeepResearch.Core.Models;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;

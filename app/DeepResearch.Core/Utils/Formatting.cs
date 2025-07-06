@@ -7,7 +7,7 @@ using System.Text;
 
 using DeepResearch.SearchClient;
 
-public static class Formatting
+internal static class Formatting
 {
     /// <summary>
     /// 検索APIのレスポンスを重複排除し、構造化された文字列に整形します。
@@ -17,7 +17,7 @@ public static class Formatting
     /// <param name="fetchFullPage">全文を含めるかどうか</param>
     /// <returns>重複排除・整形済み文字列</returns>
     // SearchResult型を受け取るオーバーロード
-    public static string DeduplicateAndFormatSources(
+    internal static string DeduplicateAndFormatSources(
         SearchResult searchResult,
         int maxTokensPerSource,
         bool fetchFullPage = false)
@@ -65,7 +65,7 @@ public static class Formatting
     /// <param name="searchResults">'results'キーを持つ検索レスポンス</param>
     /// <returns>"* title : url"形式の文字列</returns>
     // SearchResult型を受け取るオーバーロード
-    public static string FormatSources(SearchResult searchResult)
+    internal static string FormatSources(SearchResult searchResult)
     {
         if (searchResult == null || searchResult.Results == null)
             return string.Empty;
