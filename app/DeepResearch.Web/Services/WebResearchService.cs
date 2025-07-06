@@ -44,7 +44,7 @@ public class WebResearchService
                 return;
             }
 
-            await NotifyClient(clientId, "thinking", new { message = "研究を開始します..." });
+            await NotifyClient(clientId, "thinking", new { message = "調査を開始します..." });
 
             var researchService = new DeepResearchService(
                 _chatClient,
@@ -64,7 +64,7 @@ public class WebResearchService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "研究中にエラーが発生しました。トピック: {Topic}", topic);
+            _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
             await NotifyClient(clientId, "error", new { message = $"エラーが発生しました: {ex.Message}" });
         }
     }

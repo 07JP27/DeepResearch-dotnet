@@ -4,10 +4,10 @@ Azure Deep Research は、AI を活用した Web リサーチ・要約・反省�
 
 ## 機能
 
-- 研究トピックを入力すると AI が自動的に Web リサーチを実行
+- 調査トピックを入力すると AI が自動的に Web リサーチを実行
 - リアルタイムで進行状況を表示
 - 検索クエリ生成、Web 検索、要約、反省のサイクルを自動実行
-- 最終的な研究レポートを生成・表示
+- 最終的な調査レポートを生成・表示
 - Blazor Server + SignalR によるリアルタイム通信
 
 ## 必要な設定
@@ -53,7 +53,7 @@ dotnet watch run --project app/DeepResearch.Web
 
 ## アーキテクチャ
 
-- **DeepResearch.Core**: 研究ロジックとプロンプト管理
+- **DeepResearch.Core**: 調査ロジックとプロンプト管理
 - **DeepResearch.SearchClient**: Tavily API 等の検索クライアント
 - **DeepResearch.Web**: Blazor Server Web アプリケーション
   - SignalR ハブによるリアルタイム通信

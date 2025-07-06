@@ -61,7 +61,7 @@ void OnProgressChanged(ResearchProgress progress)
             break;
 
         case ProgressTypes.Reflection:
-            Console.WriteLine($"[{timestamp}] 🤔 研究結果を分析中...");
+            Console.WriteLine($"[{timestamp}] 🤔 調査結果を分析中...");
             break;
 
         case ProgressTypes.Routing:

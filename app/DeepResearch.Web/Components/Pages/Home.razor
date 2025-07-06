@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using DeepResearch.Core.Events
 @using DeepResearch.Web.Services
 @using DeepResearch.Web.Hubs
 @using Microsoft.AspNetCore.SignalR.Client
@@ -27,20 +28,21 @@
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-4">調査トピックを入力してください</h2>
             <div class="flex space-x-4">
-                <input @bind="researchTopic" 
-                       @onkeypress="OnKeyPress"
-                       placeholder="例: AIによる医療画像診断の最新動向"
-                       class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                       disabled="@isResearching" />
-                <button @onclick="StartResearch" 
-                        disabled="@(isResearching || string.IsNullOrWhiteSpace(researchTopic))"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                <input @bind="researchTopic" @onkeypress="OnKeyPress" placeholder="例: AIによる医療画像診断の最新動向"
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled="@isResearching" />
+                <button @onclick="StartResearch" disabled="@(isResearching || string.IsNullOrWhiteSpace(researchTopic))"
+                    class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     @if (isResearching)
                     {
                         <span class="flex items-center">
-                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                                </circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
                             </svg>
                             調査中...
                         </span>
@@ -110,8 +112,8 @@
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/researchHub"))
-            .Build();
+        .WithUrl(Navigation.ToAbsoluteUri("/researchHub"))
+        .Build();
 
         hubConnection.On<object>("ReceiveProgress", (message) =>
         {
@@ -138,10 +140,10 @@
         }
         catch (Exception ex)
         {
-            researchSteps.Add(new ResearchStep 
-            { 
-                Type = "error", 
-                Content = $"エラーが発生しました: {ex.Message}" 
+            researchSteps.Add(new ResearchStep
+            {
+                Type = "error",
+                Content = $"エラーが発生しました: {ex.Message}"
             });
         }
         finally
@@ -169,43 +171,43 @@
         var data = root.GetProperty("data");
 
         var content = "";
-        
+
         switch (type)
         {
-            case "thinking":
+            case ProgressTypes.Thinking:
                 content = data.GetProperty("message").GetString() ?? "";
                 break;
-            case "generate_query":
+            case ProgressTypes.GenerateQuery:
                 var query = data.GetProperty("query").GetString() ?? "";
                 var rationale = data.GetProperty("rationale").GetString() ?? "";
                 content = $"<strong>検索クエリ:</strong> {query}<br><strong>根拠:</strong> {rationale}";
                 break;
-            case "web_research":
+            case ProgressTypes.WebResearch:
                 if (data.TryGetProperty("sources", out var sources))
                 {
                     content = $"<strong>検索結果:</strong> {sources.GetArrayLength()} 件のソースを発見";
                 }
                 break;
-            case "summarize":
+            case ProgressTypes.Summarize:
                 if (data.TryGetProperty("summary", out var summary))
                 {
                     content = $"<strong>要約:</strong><br>{summary.GetString()}";
                 }
                 break;
-            case "reflection":
+            case ProgressTypes.Reflection:
                 if (data.TryGetProperty("knowledge_gap", out var gap))
                 {
                     content = $"<strong>知識ギャップ:</strong> {gap.GetString()}";
                 }
                 break;
-            case "finalize":
+            case ProgressTypes.Finalize:
                 if (data.TryGetProperty("summary", out var finalSummary))
                 {
                     finalReport = finalSummary.GetString() ?? "";
                 }
                 StateHasChanged();
                 return Task.CompletedTask;
-            case "research_complete":
+            case ProgressTypes.ResearchComplete:
                 if (data.TryGetProperty("final_summary", out var completeSummary))
                 {
                     finalReport = completeSummary.GetString() ?? "";
@@ -214,7 +216,7 @@
                 break;
         }
 
-        if (!string.IsNullOrEmpty(content) || type == "research_complete")
+        if (!string.IsNullOrEmpty(content) || type == ProgressTypes.ResearchComplete)
         {
             researchSteps.Add(new ResearchStep { Type = type, Content = content });
             StateHasChanged();
@@ -225,52 +227,52 @@
 
     private string GetStepBorderColor(string type) => type switch
     {
-        "thinking" => "border-yellow-400",
-        "generate_query" => "border-blue-400",
-        "web_research" => "border-purple-400",
-        "summarize" => "border-green-400",
-        "reflection" => "border-orange-400",
-        "finalize" => "border-indigo-400",
-        "research_complete" => "border-green-500",
+        ProgressTypes.Thinking => "border-yellow-400",
+        ProgressTypes.GenerateQuery => "border-blue-400",
+        ProgressTypes.WebResearch => "border-purple-400",
+        ProgressTypes.Summarize => "border-green-400",
+        ProgressTypes.Reflection => "border-orange-400",
+        ProgressTypes.Finalize => "border-indigo-400",
+        ProgressTypes.ResearchComplete => "border-green-500",
         "error" => "border-red-400",
         _ => "border-gray-400"
     };
 
     private string GetStepIconColor(string type) => type switch
     {
-        "thinking" => "text-yellow-500",
-        "generate_query" => "text-blue-500",
-        "web_research" => "text-purple-500",
-        "summarize" => "text-green-500",
-        "reflection" => "text-orange-500",
-        "finalize" => "text-indigo-500",
-        "research_complete" => "text-green-600",
+        ProgressTypes.Thinking => "text-yellow-500",
+        ProgressTypes.GenerateQuery => "text-blue-500",
+        ProgressTypes.WebResearch => "text-purple-500",
+        ProgressTypes.Summarize => "text-green-500",
+        ProgressTypes.Reflection => "text-orange-500",
+        ProgressTypes.Finalize => "text-indigo-500",
+        ProgressTypes.ResearchComplete => "text-green-600",
         "error" => "text-red-500",
         _ => "text-gray-500"
     };
 
     private string GetStepIcon(string type) => type switch
     {
-        "thinking" => "💭",
-        "generate_query" => "🔍",
-        "web_research" => "🌐",
-        "summarize" => "📝",
-        "reflection" => "🤔",
-        "finalize" => "📋",
-        "research_complete" => "✅",
+        ProgressTypes.Thinking => "💭",
+        ProgressTypes.GenerateQuery => "🔍",
+        ProgressTypes.WebResearch => "🌐",
+        ProgressTypes.Summarize => "📝",
+        ProgressTypes.Reflection => "🤔",
+        ProgressTypes.Finalize => "📋",
+        ProgressTypes.ResearchComplete => "✅",
         "error" => "❌",
         _ => "📄"
     };
 
     private string GetStepTitle(string type) => type switch
     {
-        "thinking" => "思考中",
-        "generate_query" => "検索クエリ生成",
-        "web_research" => "Web検索",
-        "summarize" => "要約作成",
-        "reflection" => "反省・知識ギャップ分析",
-        "finalize" => "最終レポート作成",
-        "research_complete" => "調査完了",
+        ProgressTypes.Thinking => "思考中",
+        ProgressTypes.GenerateQuery => "検索クエリ生成",
+        ProgressTypes.WebResearch => "Web検索",
+        ProgressTypes.Summarize => "要約作成",
+        ProgressTypes.Reflection => "反省・知識ギャップ分析",
+        ProgressTypes.Finalize => "最終レポート作成",
+        ProgressTypes.ResearchComplete => "調査完了",
         "error" => "エラー",
         _ => "処理中"
     };
