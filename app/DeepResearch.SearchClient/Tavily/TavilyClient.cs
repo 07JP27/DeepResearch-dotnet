@@ -26,12 +26,12 @@ public class TavilyClient : ITavilyClient
     public TavilyClient(HttpClient httpClient, string? apiKey = null, string? baseUrl = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        
-        _apiKey = apiKey ?? Environment.GetEnvironmentVariable("TAVILY_API_KEY") ?? 
-                  throw new MissingApiKeyException();
-        
+
+        _apiKey = apiKey ?? Environment.GetEnvironmentVariable("TAVILY_API_KEY") ??
+                  throw new ArgumentException("No API key provided. Please provide the API key or set the TAVILY_API_KEY environment variable.");
+
         _baseUrl = baseUrl ?? DefaultBaseUrl;
-        
+
         _httpClient.BaseAddress = new Uri(_baseUrl);
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
         _httpClient.DefaultRequestHeaders.Add("X-Client-Source", ClientSource);
@@ -84,177 +84,6 @@ public class TavilyClient : ITavilyClient
         return await SendRequestAsync<TavilySearchResult>("/search", filteredData, Math.Min(timeout, 120), cancellationToken);
     }
 
-    /// <inheritdoc />
-    public async Task<string> GetSearchContextAsync(
-        string query,
-        TavilySearchDepth searchDepth = TavilySearchDepth.Basic,
-        TavilyTopic topic = TavilyTopic.General,
-        int days = 7,
-        int maxResults = 5,
-        IEnumerable<string>? includeDomains = null,
-        IEnumerable<string>? excludeDomains = null,
-        int maxTokens = 4000,
-        int timeout = 60,
-        string? country = null,
-        CancellationToken cancellationToken = default)
-    {
-        var searchResult = await SearchAsync(
-            query,
-            searchDepth,
-            topic,
-            days: days,
-            maxResults: maxResults,
-            includeDomains: includeDomains,
-            excludeDomains: excludeDomains,
-            includeAnswer: false,
-            includeRawContent: false,
-            includeImages: false,
-            timeout: timeout,
-            country: country,
-            cancellationToken: cancellationToken);
-
-        var context = searchResult.Results.Select(r => new { url = r.Url, content = r.Content }).ToList();
-        
-        // Simple implementation - in a real scenario, you might want to implement token limiting
-        return JsonSerializer.Serialize(context, _jsonOptions);
-    }
-
-    /// <inheritdoc />
-    public async Task<string> QnaSearchAsync(
-        string query,
-        TavilySearchDepth searchDepth = TavilySearchDepth.Advanced,
-        TavilyTopic topic = TavilyTopic.General,
-        int days = 7,
-        int maxResults = 5,
-        IEnumerable<string>? includeDomains = null,
-        IEnumerable<string>? excludeDomains = null,
-        int timeout = 60,
-        string? country = null,
-        CancellationToken cancellationToken = default)
-    {
-        var searchResult = await SearchAsync(
-            query,
-            searchDepth,
-            topic,
-            days: days,
-            maxResults: maxResults,
-            includeDomains: includeDomains,
-            excludeDomains: excludeDomains,
-            includeAnswer: true,
-            includeRawContent: false,
-            includeImages: false,
-            timeout: timeout,
-            country: country,
-            cancellationToken: cancellationToken);
-
-        return searchResult.Answer ?? string.Empty;
-    }
-
-    /// <inheritdoc />
-    public async Task<TavilyExtractResult> ExtractAsync(
-        IEnumerable<string> urls,
-        bool? includeImages = null,
-        TavilyExtractDepth? extractDepth = null,
-        TavilyContentFormat? format = null,
-        int timeout = 60,
-        bool? includeFavicon = null,
-        CancellationToken cancellationToken = default)
-    {
-        var requestData = new Dictionary<string, object?>
-        {
-            ["urls"] = urls.ToList(),
-            ["include_images"] = includeImages,
-            ["extract_depth"] = extractDepth?.ToString().ToLowerInvariant(),
-            ["format"] = format?.ToString().ToLowerInvariant(),
-            ["include_favicon"] = includeFavicon
-        };
-
-        var filteredData = requestData.Where(kvp => kvp.Value != null).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-        return await SendRequestAsync<TavilyExtractResult>("/extract", filteredData, Math.Min(timeout, 120), cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public async Task<TavilyCrawlResult> CrawlAsync(
-        string url,
-        int? maxDepth = null,
-        int? maxBreadth = null,
-        int? limit = null,
-        string? instructions = null,
-        IEnumerable<string>? selectPaths = null,
-        IEnumerable<string>? selectDomains = null,
-        IEnumerable<string>? excludePaths = null,
-        IEnumerable<string>? excludeDomains = null,
-        bool? allowExternal = null,
-        IEnumerable<TavilyCategory>? categories = null,
-        TavilyExtractDepth? extractDepth = null,
-        bool? includeImages = null,
-        TavilyContentFormat? format = null,
-        int timeout = 60,
-        bool? includeFavicon = null,
-        CancellationToken cancellationToken = default)
-    {
-        var requestData = new Dictionary<string, object?>
-        {
-            ["url"] = url,
-            ["max_depth"] = maxDepth,
-            ["max_breadth"] = maxBreadth,
-            ["limit"] = limit,
-            ["instructions"] = instructions,
-            ["select_paths"] = selectPaths?.ToList(),
-            ["select_domains"] = selectDomains?.ToList(),
-            ["exclude_paths"] = excludePaths?.ToList(),
-            ["exclude_domains"] = excludeDomains?.ToList(),
-            ["allow_external"] = allowExternal,
-            ["categories"] = categories?.Select(c => c.ToString().ToLowerInvariant()).ToList(),
-            ["extract_depth"] = extractDepth?.ToString().ToLowerInvariant(),
-            ["include_images"] = includeImages,
-            ["format"] = format?.ToString().ToLowerInvariant(),
-            ["include_favicon"] = includeFavicon
-        };
-
-        var filteredData = requestData.Where(kvp => kvp.Value != null).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-        return await SendRequestAsync<TavilyCrawlResult>("/crawl", filteredData, Math.Min(timeout, 120), cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public async Task<TavilyMapResult> MapAsync(
-        string url,
-        int? maxDepth = null,
-        int? maxBreadth = null,
-        int? limit = null,
-        string? instructions = null,
-        IEnumerable<string>? selectPaths = null,
-        IEnumerable<string>? selectDomains = null,
-        IEnumerable<string>? excludePaths = null,
-        IEnumerable<string>? excludeDomains = null,
-        bool? allowExternal = null,
-        bool? includeImages = null,
-        IEnumerable<TavilyCategory>? categories = null,
-        int timeout = 60,
-        CancellationToken cancellationToken = default)
-    {
-        var requestData = new Dictionary<string, object?>
-        {
-            ["url"] = url,
-            ["max_depth"] = maxDepth,
-            ["max_breadth"] = maxBreadth,
-            ["limit"] = limit,
-            ["instructions"] = instructions,
-            ["select_paths"] = selectPaths?.ToList(),
-            ["select_domains"] = selectDomains?.ToList(),
-            ["exclude_paths"] = excludePaths?.ToList(),
-            ["exclude_domains"] = excludeDomains?.ToList(),
-            ["allow_external"] = allowExternal,
-            ["include_images"] = includeImages,
-            ["categories"] = categories?.Select(c => c.ToString().ToLowerInvariant()).ToList()
-        };
-
-        var filteredData = requestData.Where(kvp => kvp.Value != null).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-        return await SendRequestAsync<TavilyMapResult>("/map", filteredData, Math.Min(timeout, 120), cancellationToken);
-    }
 
     private async Task<T> SendRequestAsync<T>(string endpoint, Dictionary<string, object?> data, int timeoutSeconds, CancellationToken cancellationToken)
     {
@@ -265,7 +94,7 @@ public class TavilyClient : ITavilyClient
         {
             var json = JsonSerializer.Serialize(data, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            
+
             using var response = await _httpClient.PostAsync(endpoint, content, cts.Token);
             var responseContent = await response.Content.ReadAsStringAsync(cts.Token);
 
@@ -281,14 +110,14 @@ public class TavilyClient : ITavilyClient
         }
         catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw new RequestTimeoutException(timeoutSeconds);
+            throw new TimeoutException($"Request timed out after {timeoutSeconds} seconds.");
         }
     }
 
     private static Exception GetExceptionForResponse(HttpResponseMessage response, string responseContent)
     {
         string? errorDetail = null;
-        
+
         try
         {
             var errorResponse = JsonSerializer.Deserialize<JsonElement>(responseContent);
@@ -311,10 +140,10 @@ public class TavilyClient : ITavilyClient
 
         return response.StatusCode switch
         {
-            System.Net.HttpStatusCode.Unauthorized => new InvalidApiKeyException(errorDetail),
-            System.Net.HttpStatusCode.Forbidden => new ForbiddenException(errorDetail),
-            System.Net.HttpStatusCode.BadRequest => new BadRequestException(errorDetail),
-            System.Net.HttpStatusCode.TooManyRequests => new UsageLimitExceededException(errorDetail),
+            System.Net.HttpStatusCode.Unauthorized => new UnauthorizedAccessException(errorDetail ?? "Invalid API key"),
+            System.Net.HttpStatusCode.Forbidden => new UnauthorizedAccessException(errorDetail ?? "Access forbidden"),
+            System.Net.HttpStatusCode.BadRequest => new ArgumentException(errorDetail ?? "Bad request"),
+            System.Net.HttpStatusCode.TooManyRequests => new InvalidOperationException(errorDetail ?? "Usage limit exceeded"),
             _ => new HttpRequestException($"Request failed with status {response.StatusCode}: {errorDetail ?? responseContent}")
         };
     }

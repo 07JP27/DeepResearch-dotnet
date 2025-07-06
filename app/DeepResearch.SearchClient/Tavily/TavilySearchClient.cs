@@ -43,15 +43,11 @@ public class TavilySearchClient : ISearchClient
 
             return searchResult;
         }
-        catch (InvalidApiKeyException ex)
+        catch (UnauthorizedAccessException ex)
         {
-            throw new InvalidOperationException("Invalid API key", ex);
+            throw new InvalidOperationException("API key error", ex);
         }
-        catch (UsageLimitExceededException ex)
-        {
-            throw new InvalidOperationException("Usage limit exceeded", ex);
-        }
-        catch (RequestTimeoutException ex)
+        catch (TimeoutException ex)
         {
             throw new TimeoutException("Request timed out", ex);
         }
