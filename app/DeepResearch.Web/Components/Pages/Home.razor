@@ -246,9 +246,18 @@
 
     }
 
-    private void TriggerStateHasChanged()
+    private async void TriggerStateHasChanged()
     {
         StateHasChanged();
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToBottom");
+        }
+        catch (Exception ex)
+        {
+            // 処理上は特に問題ないため何もしない
+        }
     }
 
     private T? DeserializeProgressData<T>(ProgressBase progressMessage) where T : ProgressBase
