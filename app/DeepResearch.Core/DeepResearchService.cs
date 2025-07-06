@@ -3,10 +3,12 @@ using System.Threading.Tasks;
 using DeepResearch.SearchClient.Tavily;
 using DeepResearch.SearchClient;
 using DeepResearch.Core.Models;
+using DeepResearch.Core.JsonSchema;
 using System.Collections.Generic;
 using System;
 using Azure.AI.OpenAI;
 using OpenAI.Chat;
+using System.Text.Json;
 
 namespace DeepResearch.Core;
 
@@ -17,6 +19,21 @@ public class DeepResearchService
     private readonly int _maxLoops;
     private readonly int _maxTokensPerSource;
     private readonly Action<ProgressBase>? _onProgressChanged;
+
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private static readonly ChatCompletionOptions _reflectionOnSummaryOptions = new()
+    {
+        ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("ReflectionResponse", JsonSchemaGenerator.GenerateSchemaAsBinaryData(SourceGenerationContext.Default.ReflectionOnSummaryResponse)),
+    };
+
+    private static readonly ChatCompletionOptions _generateQueryOptions = new()
+    {
+        ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("AnalysisAgentResponse", JsonSchemaGenerator.GenerateSchemaAsBinaryData(SourceGenerationContext.Default.GenerateQueryResponse)),
+    };
 
     public DeepResearchService(
         ChatClient aiChatClient,
@@ -42,7 +59,7 @@ public class DeepResearchService
         {
             NotifyProgress(new RoutingProgress
             {
-                Decision = "continue",
+                Decision = RoutingDecision.Continue,
                 LoopCount = state.ResearchLoopCount
             });
 
@@ -54,7 +71,7 @@ public class DeepResearchService
 
         NotifyProgress(new RoutingProgress
         {
-            Decision = "finalize",
+            Decision = RoutingDecision.Finalize,
             LoopCount = state.ResearchLoopCount
         });
 
@@ -62,7 +79,8 @@ public class DeepResearchService
 
         NotifyProgress(new ResearchCompleteProgress
         {
-            Status = "complete"
+            FinalSummary = state.RunningSummary,
+            Images = state.Images
         });
 
         return state;
@@ -76,12 +94,15 @@ public class DeepResearchService
             new SystemChatMessage(prompt),
             new UserChatMessage("Generate a query for web search:")
         };
-        var result = await _aiChatClient.CompleteChatAsync(messages);
-        var textResult = result.Value.Content.First().Text;
 
-        var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
-        state.SearchQuery = obj.GetProperty("query").GetString() ?? "";
-        state.QueryRationale = obj.GetProperty("rationale").GetString() ?? "";
+        var result = await _aiChatClient.CompleteChatAsync(messages, _generateQueryOptions);
+        if (result.Value.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed withz finish reason: {result.Value.FinishReason}");
+
+        var generateQueryResponse = JsonSerializer.Deserialize<GenerateQueryResponse>(result.Value.Content.First().Text, _jsonSerializerOptions);
+        if (generateQueryResponse == null) throw new InvalidOperationException("Failed to deserialize GenerateQueryResponse");
+
+        state.SearchQuery = generateQueryResponse.Query;
+        state.QueryRationale = generateQueryResponse.Rationale;
 
         NotifyProgress(new QueryGenerationProgress
         {
@@ -141,19 +162,15 @@ public class DeepResearchService
             new SystemChatMessage(prompt),
             new UserChatMessage($"Reflect on our existing knowledge: \n===\n{state.RunningSummary},\n===\nAnd now identify a knowledge gap and generate a follow-up web search query:")
         };
-        var result = await _aiChatClient.CompleteChatAsync(messages);
-        var textResult = result.Value.Content.First().Text;
-        try
-        {
-            var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
-            state.SearchQuery = obj.GetProperty("follow_up_query").GetString() ?? "";
-            state.KnowledgeGap = obj.GetProperty("knowledge_gap").GetString() ?? "";
-        }
-        catch
-        {
-            state.SearchQuery = $"Tell me more about {state.ResearchTopic}";
-            state.KnowledgeGap = "Unable to identify specific knowledge gap";
-        }
+
+        var result = await _aiChatClient.CompleteChatAsync(messages, _reflectionOnSummaryOptions);
+        if (result.Value.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.Value.FinishReason}");
+
+        var reflectionResponse = JsonSerializer.Deserialize<ReflectionOnSummaryResponse>(result.Value.Content.First().Text, _jsonSerializerOptions);
+        if (reflectionResponse == null) throw new InvalidOperationException("Failed to deserialize ReflectionOnSummaryResponse");
+
+        state.SearchQuery = reflectionResponse.FollowUpQuery;
+        state.KnowledgeGap = reflectionResponse.KnowledgeGap;
 
         NotifyProgress(new ReflectionProgress
         {

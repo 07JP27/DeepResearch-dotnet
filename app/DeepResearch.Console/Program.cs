@@ -63,7 +63,13 @@ void OnProgressChanged(ProgressBase progress)
             break;
 
         case RoutingProgress routingProgress:
-            Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中...");
+            var decisionText = routingProgress.Decision switch
+            {
+                RoutingDecision.Continue => "調査を続行",
+                RoutingDecision.Finalize => "調査を完了",
+                _ => routingProgress.Decision.ToString()
+            };
+            Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中: {decisionText} (ループ {routingProgress.LoopCount + 1})");
             break;
 
         case FinalizeProgress finalizeProgress:

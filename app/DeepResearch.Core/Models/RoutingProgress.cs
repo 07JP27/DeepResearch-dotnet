@@ -6,6 +6,12 @@ public class RoutingProgress : ProgressBase
     {
     }
 
-    public string Decision { get; set; } = string.Empty;
+    public RoutingDecision Decision { get; set; } = RoutingDecision.Continue;
     public int LoopCount { get; set; }
+}
+
+public enum RoutingDecision
+{
+    Continue,
+    Finalize
 }

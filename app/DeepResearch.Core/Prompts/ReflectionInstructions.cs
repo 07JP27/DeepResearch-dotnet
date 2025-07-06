@@ -19,15 +19,15 @@ internal static partial class Prompts
 
         <FORMAT>
         Format your response as a JSON object with these exact keys:
-        - knowledge_gap: Describe what information is missing or needs clarification
-        - follow_up_query: Write a specific question to address this gap
+        - KnowledgeGap: Describe what information is missing or needs clarification
+        - FollowUpQuery: Write a specific question to address this gap
         </FORMAT>
 
         <Task>
         Reflect carefully on the Summary to identify knowledge gaps and produce a follow-up query. Then, produce your output following this JSON format:
         {{
-            "knowledge_gap": "The summary lacks information about performance metrics and benchmarks",
-            "follow_up_query": "What are typical performance benchmarks and metrics used to evaluate [specific technology]?"
+            "KnowledgeGap": "The summary lacks information about performance metrics and benchmarks",
+            "FollowUpQuery": "What are typical performance benchmarks and metrics used to evaluate [specific technology]?"
         }}
         </Task>
 

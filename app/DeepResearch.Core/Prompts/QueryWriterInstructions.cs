@@ -18,15 +18,15 @@ internal static partial class Prompts
 
         <FORMAT>
         Format your response as a JSON object with ALL three of these exact keys:
-           - "query": The actual search query string
-           - "rationale": Brief explanation of why this query is relevant
+           - "Query": The actual search query string
+           - "Rationale": Brief explanation of why this query is relevant
         </FORMAT>
 
         <EXAMPLE>
         Example output:
         {{
-            "query": "machine learning transformer architecture explained",
-            "rationale": "Understanding the fundamental structure of transformer models"
+            "Query": "machine learning transformer architecture explained",
+            "Rationale": "Understanding the fundamental structure of transformer models"
         }}
         </EXAMPLE>
 

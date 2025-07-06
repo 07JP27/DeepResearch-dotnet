@@ -6,7 +6,6 @@ public class ResearchCompleteProgress : ProgressBase
     {
     }
 
-    public string Status { get; set; } = string.Empty;
     public string? FinalSummary { get; set; }
     public List<string> Images { get; set; } = new();
 }

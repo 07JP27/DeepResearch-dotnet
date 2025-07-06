@@ -171,7 +171,13 @@
                 var routingProgress = DeserializeProgressData<RoutingProgress>(message);
                 if (routingProgress != null)
                 {
-                    content = $"<strong>次の処理を判断:</strong> {routingProgress.Decision} (ループ {routingProgress.LoopCount + 1})";
+                    var decisionText = routingProgress.Decision switch
+                    {
+                        RoutingDecision.Continue => "調査を続行",
+                        RoutingDecision.Finalize => "調査を完了",
+                        _ => routingProgress.Decision.ToString()
+                    };
+                    content = $"<strong>次の処理を判断:</strong> {decisionText} (ループ {routingProgress.LoopCount + 1})";
                 }
                 break;
                 
