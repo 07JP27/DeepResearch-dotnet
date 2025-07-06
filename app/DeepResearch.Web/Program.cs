@@ -1,5 +1,4 @@
 using DeepResearch.Web.Components;
-using DeepResearch.Web.Hubs;
 using DeepResearch.Web.Services;
 using DeepResearch.SearchClient;
 using DeepResearch.SearchClient.Tavily;
@@ -13,8 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Add SignalR
-builder.Services.AddSignalR();
+// Add Controllers for API endpoints
+builder.Services.AddControllers();
 
 // Add HttpClient
 builder.Services.AddHttpClient();
@@ -51,7 +50,8 @@ builder.Services.AddScoped<ISearchClient>(provider =>
     return new DeepResearch.SearchClient.Tavily.TavilySearchClient(tavilyClient);
 });
 
-// Add research service
+// Add research services
+builder.Services.AddSingleton<ResearchProgressService>();
 builder.Services.AddScoped<WebResearchService>();
 
 var app = builder.Build();
@@ -72,7 +72,7 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Map SignalR hub
-app.MapHub<ResearchHub>("/researchHub");
+// Map API controllers
+app.MapControllers();
 
 app.Run();

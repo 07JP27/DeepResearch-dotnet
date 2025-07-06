@@ -1,8 +1,6 @@
 using DeepResearch.Core;
 using DeepResearch.Core.Events;
 using DeepResearch.SearchClient;
-using DeepResearch.Web.Hubs;
-using Microsoft.AspNetCore.SignalR;
 using OpenAI.Chat;
 using System.Text.Json;
 
@@ -10,18 +8,18 @@ namespace DeepResearch.Web.Services;
 
 public class WebResearchService
 {
-    private readonly IHubContext<ResearchHub> _hubContext;
+    private readonly ResearchProgressService _progressService;
     private readonly ChatClient? _chatClient;
     private readonly ISearchClient? _searchClient;
     private readonly ILogger<WebResearchService> _logger;
 
     public WebResearchService(
-        IHubContext<ResearchHub> hubContext,
+        ResearchProgressService progressService,
         ILogger<WebResearchService> logger,
         ChatClient? chatClient = null,
         ISearchClient? searchClient = null)
     {
-        _hubContext = hubContext;
+        _progressService = progressService;
         _logger = logger;
         _chatClient = chatClient;
         _searchClient = searchClient;
@@ -34,17 +32,17 @@ public class WebResearchService
             // 設定チェック
             if (_chatClient == null)
             {
-                await NotifyClient(clientId, "error", new { message = "Azure OpenAI設定が不完全です。appsettings.jsonを確認してください。" });
+                NotifyClient(clientId, "error", new { message = "Azure OpenAI設定が不完全です。appsettings.jsonを確認してください。" });
                 return;
             }
 
             if (_searchClient == null)
             {
-                await NotifyClient(clientId, "error", new { message = "Tavily API設定が不完全です。appsettings.jsonを確認してください。" });
+                NotifyClient(clientId, "error", new { message = "Tavily API設定が不完全です。appsettings.jsonを確認してください。" });
                 return;
             }
 
-            await NotifyClient(clientId, "thinking", new { message = "調査を開始します..." });
+            NotifyClient(clientId, "thinking", new { message = "調査を開始します..." });
 
             var researchService = new DeepResearchService(
                 _chatClient,
@@ -56,7 +54,7 @@ public class WebResearchService
 
             var result = await researchService.RunResearchAsync(topic, cancellationToken);
 
-            await NotifyClient(clientId, "research_complete", new
+            NotifyClient(clientId, "research_complete", new
             {
                 status = "complete",
                 final_summary = result.RunningSummary
@@ -65,32 +63,29 @@ public class WebResearchService
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            await NotifyClient(clientId, "error", new { message = $"エラーが発生しました: {ex.Message}" });
+            NotifyClient(clientId, "error", new { message = $"エラーが発生しました: {ex.Message}" });
         }
     }
 
-    private async Task OnProgressChanged(ResearchProgress progress, string clientId)
+    private Task OnProgressChanged(ResearchProgress progress, string clientId)
     {
         try
         {
-            await NotifyClient(clientId, progress.Type, progress.Data);
+            NotifyClient(clientId, progress.Type, progress.Data);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "進行状況の通知中にエラーが発生しました");
         }
+
+        return Task.CompletedTask;
     }
 
-    private async Task NotifyClient(string clientId, string type, object data)
+    private void NotifyClient(string clientId, string type, object data)
     {
         try
         {
-            await _hubContext.Clients.Group(clientId).SendAsync("ReceiveProgress", new
-            {
-                type = type,
-                data = data,
-                timestamp = DateTime.UtcNow
-            });
+            _progressService.AddProgress(clientId, type, data);
         }
         catch (Exception ex)
         {

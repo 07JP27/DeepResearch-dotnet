@@ -1,10 +1,8 @@
 ﻿@page "/"
 @using DeepResearch.Core.Events
-@using DeepResearch.Web.Services
-@using DeepResearch.Web.Hubs
-@using Microsoft.AspNetCore.SignalR.Client
-@inject WebResearchService ResearchService
 @inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
@@ -100,7 +98,8 @@
     private List<ResearchStep> researchSteps = new();
     private string finalReport = "";
     private string clientId = Guid.NewGuid().ToString();
-    private HubConnection? hubConnection;
+    private Timer? pollingTimer;
+    private int lastProgressCount = 0;
 
     public class ResearchStep
     {
@@ -109,19 +108,58 @@
         public DateTime Timestamp { get; set; } = DateTime.Now;
     }
 
-    protected override async Task OnInitializedAsync()
+    private void StartPolling()
     {
-        hubConnection = new HubConnectionBuilder()
-        .WithUrl(Navigation.ToAbsoluteUri("/researchHub"))
-        .Build();
+        // 既存のタイマーがあれば停止
+        pollingTimer?.Dispose();
+        pollingTimer = new Timer(async _ => await PollProgress(), null, TimeSpan.Zero, TimeSpan.FromMilliseconds(1000));
+    }
 
-        hubConnection.On<object>("ReceiveProgress", (message) =>
+    private void StopPolling()
+    {
+        pollingTimer?.Dispose();
+        pollingTimer = null;
+    }
+
+    private async Task PollProgress()
+    {
+        try
         {
-            InvokeAsync(() => HandleProgressUpdate(message));
-        });
+            var url = Navigation.ToAbsoluteUri($"/api/research/progress/{clientId}?fromIndex={lastProgressCount}");
+            var response = await HttpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var result = System.Text.Json.JsonSerializer.Deserialize<ProgressResponse>(content, new
+                System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
 
-        await hubConnection.StartAsync();
-        await hubConnection.SendAsync("JoinGroup", clientId);
+                if (result != null)
+                {
+                    isResearching = result.IsResearching;
+
+                    foreach (var progress in result.Progress)
+                    {
+                        await InvokeAsync(() => HandleProgressUpdate(progress));
+                    }
+
+                    lastProgressCount = result.TotalCount;
+                    await InvokeAsync(StateHasChanged);
+
+                    // 調査が完了したらポーリングを停止
+                    if (!isResearching)
+                    {
+                        StopPolling();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ポーリングエラー: {ex.Message}");
+        }
     }
 
     private async Task StartResearch()
@@ -129,14 +167,40 @@
         if (string.IsNullOrWhiteSpace(researchTopic) || isResearching)
             return;
 
-        isResearching = true;
         researchSteps.Clear();
         finalReport = "";
+        lastProgressCount = 0;
         StateHasChanged();
 
         try
         {
-            await ResearchService.StartResearchAsync(researchTopic, clientId);
+            var request = new
+            {
+                Topic = researchTopic,
+                ClientId = clientId
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(request);
+            var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+            var url = Navigation.ToAbsoluteUri("/api/research/start");
+            var response = await HttpClient.PostAsync(url, httpContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // 調査が正常に開始されたらポーリングを開始
+                StartPolling();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                researchSteps.Add(new ResearchStep
+                {
+                    Type = "error",
+                    Content = $"エラーが発生しました: {errorContent}"
+                });
+                StateHasChanged();
+            }
         }
         catch (Exception ex)
         {
@@ -145,10 +209,6 @@
                 Type = "error",
                 Content = $"エラーが発生しました: {ex.Message}"
             });
-        }
-        finally
-        {
-            isResearching = false;
             StateHasChanged();
         }
     }
@@ -161,29 +221,26 @@
         }
     }
 
-    private Task HandleProgressUpdate(object message)
+    private Task HandleProgressUpdate(ProgressMessage message)
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(message);
-        var doc = System.Text.Json.JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var type = root.GetProperty("type").GetString() ?? "";
-        var data = root.GetProperty("data");
+        var type = message.Type;
+        var data = message.Data;
 
         var content = "";
 
         switch (type)
         {
             case ProgressTypes.Thinking:
-                content = data.GetProperty("message").GetString() ?? "";
+                if (data.TryGetProperty("message", out var msgElement))
+                    content = msgElement.GetString() ?? "";
                 break;
             case ProgressTypes.GenerateQuery:
-                var query = data.GetProperty("query").GetString() ?? "";
-                var rationale = data.GetProperty("rationale").GetString() ?? "";
+                var query = data.TryGetProperty("query", out var queryElement) ? queryElement.GetString() ?? "" : "";
+                var rationale = data.TryGetProperty("rationale", out var rationaleElement) ? rationaleElement.GetString() ?? "" : "";
                 content = $"<strong>検索クエリ:</strong> {query}<br><strong>根拠:</strong> {rationale}";
                 break;
             case ProgressTypes.Routing:
-                content = $"<strong>次の処理を判断中</strong>";
+                content = $"<strong>次の処理を判断</strong>";
                 break;
             case ProgressTypes.WebResearch:
                 if (data.TryGetProperty("sources", out var sources))
@@ -208,7 +265,6 @@
                 {
                     finalReport = finalSummary.GetString() ?? "";
                 }
-                StateHasChanged();
                 return Task.CompletedTask;
             case ProgressTypes.ResearchComplete:
                 if (data.TryGetProperty("final_summary", out var completeSummary))
@@ -222,7 +278,6 @@
         if (!string.IsNullOrEmpty(content) || type == ProgressTypes.ResearchComplete)
         {
             researchSteps.Add(new ResearchStep { Type = type, Content = content });
-            StateHasChanged();
         }
 
         return Task.CompletedTask;
@@ -285,11 +340,31 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (hubConnection != null)
+        StopPolling();
+
+        try
         {
-            await hubConnection.DisposeAsync();
+            // 進行状況をクリア
+            var url = Navigation.ToAbsoluteUri($"/api/research/progress/{clientId}");
+            await HttpClient.DeleteAsync(url);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"クリーンアップエラー: {ex.Message}");
         }
     }
-}
 
-@inject NavigationManager Navigation
+    public class ProgressResponse
+    {
+        public List<ProgressMessage> Progress { get; set; } = new();
+        public bool IsResearching { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class ProgressMessage
+    {
+        public string Type { get; set; } = "";
+        public System.Text.Json.JsonElement Data { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+}
