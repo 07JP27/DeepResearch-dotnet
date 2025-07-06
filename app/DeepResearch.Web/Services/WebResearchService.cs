@@ -8,71 +8,70 @@ namespace DeepResearch.Web.Services;
 
 public class WebResearchService
 {
-    private readonly ResearchProgressService _progressService;
     private readonly ChatClient? _chatClient;
     private readonly ISearchClient? _searchClient;
     private readonly ILogger<WebResearchService> _logger;
+    public event Action? OnProgressUpdated;
+
+    public List<ProgressBase> ProgressHistory { get; private set; } = new List<ProgressBase>();
 
     public WebResearchService(
-        ResearchProgressService progressService,
         ILogger<WebResearchService> logger,
         ChatClient? chatClient = null,
         ISearchClient? searchClient = null)
     {
-        _progressService = progressService;
         _logger = logger;
         _chatClient = chatClient;
         _searchClient = searchClient;
     }
 
-    public async Task StartResearchAsync(string topic, string clientId, CancellationToken cancellationToken = default)
+    public async Task StartResearchAsync(string topic, CancellationToken cancellationToken = default)
     {
         try
         {
             // 設定チェック
             if (_chatClient == null)
             {
-                NotifyClient(clientId, "error", new { message = "Azure OpenAI設定が不完全です。appsettings.jsonを確認してください。" });
+                NotifyClient(new ErrorProgress { Message = "Azure OpenAI設定が不完全です。appsettings.jsonを確認してください。" });
                 return;
             }
 
             if (_searchClient == null)
             {
-                NotifyClient(clientId, "error", new { message = "Tavily API設定が不完全です。appsettings.jsonを確認してください。" });
+                NotifyClient(new ErrorProgress { Message = "Tavily API設定が不完全です。appsettings.jsonを確認してください。" });
                 return;
             }
 
-            NotifyClient(clientId, "thinking", new { message = "調査を開始します..." });
+            if (string.IsNullOrWhiteSpace(topic))
+            {
+                NotifyClient(new ErrorProgress { Message = "トピックは必須です。" });
+                return;
+            }
+
+            NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
 
             var researchService = new DeepResearchService(
                 _chatClient,
                 _searchClient,
-                progress => OnProgressChanged(progress, clientId).Wait(),
+                progress => OnProgressChanged(progress).Wait(),
                 maxLoops: 3,
                 maxTokensPerSource: 1000
             );
 
-            var result = await researchService.RunResearchAsync(topic, cancellationToken);
-
-            NotifyClient(clientId, "research_complete", new
-            {
-                status = "complete",
-                final_summary = result.RunningSummary,
-                images = result.Images
-            });
+            await researchService.RunResearchAsync(topic, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            NotifyClient(clientId, "error", new { message = $"エラーが発生しました: {ex.Message}" });
+            NotifyClient(new ErrorProgress { Message = $"エラーが発生しました: {ex.Message}" });
         }
     }
 
-    private Task OnProgressChanged(ResearchProgress progress, string clientId)
+    private Task OnProgressChanged(ProgressBase progress)
     {
         try
         {
-            NotifyClient(clientId, progress.Type, progress.Data);
+            NotifyClient(progress);
         }
         catch (Exception ex)
         {
@@ -82,11 +81,12 @@ public class WebResearchService
         return Task.CompletedTask;
     }
 
-    private void NotifyClient(string clientId, string type, object data)
+    private void NotifyClient(ProgressBase progress)
     {
         try
         {
-            _progressService.AddProgress(clientId, type, data);
+            ProgressHistory.Add(progress);
+            OnProgressUpdated?.Invoke();
         }
         catch (Exception ex)
         {

@@ -16,12 +16,12 @@ public class DeepResearchService
     private readonly ISearchClient _searchClient;
     private readonly int _maxLoops;
     private readonly int _maxTokensPerSource;
-    private readonly Action<ResearchProgress> _onProgressChanged;
+    private readonly Action<ProgressBase>? _onProgressChanged;
 
     public DeepResearchService(
         ChatClient aiChatClient,
         ISearchClient searchClient,
-        Action<ResearchProgress> onProgressChanged = null,
+        Action<ProgressBase>? onProgressChanged = null,
         int maxLoops = 3,
         int maxTokensPerSource = 1000)
     {
@@ -41,10 +41,10 @@ public class DeepResearchService
         while (state.ResearchLoopCount < _maxLoops)
         {
             // ルーティング通知
-            NotifyProgress(ProgressTypes.Routing, new
+            NotifyProgress(new RoutingProgress
             {
-                decision = "continue",
-                loop_count = state.ResearchLoopCount
+                Decision = "continue",
+                LoopCount = state.ResearchLoopCount
             });
 
             await WebResearchAsync(state, cancellationToken);
@@ -53,17 +53,20 @@ public class DeepResearchService
             state.ResearchLoopCount++;
         }
 
-        // 最終化の通知
-        NotifyProgress(ProgressTypes.Routing, new
+        // 最終化通知
+        NotifyProgress(new RoutingProgress
         {
-            decision = "finalize",
-            loop_count = state.ResearchLoopCount
+            Decision = "finalize",
+            LoopCount = state.ResearchLoopCount
         });
 
         await FinalizeSummaryAsync(state, cancellationToken);
 
         // 完了通知
-        NotifyProgress(ProgressTypes.ResearchComplete, new { status = "complete" });
+        NotifyProgress(new ResearchCompleteProgress
+        {
+            Status = "complete"
+        });
 
         return state;
     }
@@ -81,14 +84,14 @@ public class DeepResearchService
 
         // JSONパースしてstate.SearchQuery, state.QueryRationaleをセット
         var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
-        state.SearchQuery = obj.GetProperty("query").GetString();
-        state.QueryRationale = obj.GetProperty("rationale").GetString();
+        state.SearchQuery = obj.GetProperty("query").GetString() ?? "";
+        state.QueryRationale = obj.GetProperty("rationale").GetString() ?? "";
 
-        // クライアントに通知
-        NotifyProgress(ProgressTypes.GenerateQuery, new
+        // 通知
+        NotifyProgress(new QueryGenerationProgress
         {
-            query = state.SearchQuery,
-            rationale = state.QueryRationale
+            Query = state.SearchQuery,
+            Rationale = state.QueryRationale
         });
     }
 
@@ -102,11 +105,12 @@ public class DeepResearchService
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxTokensPerSource));
 
-        // クライアントに通知
-        NotifyProgress(ProgressTypes.WebResearch, new
+        // 通知
+        NotifyProgress(new WebResearchProgress
         {
-            sources = searchResult.Results,
-            images = searchResult.Images
+            SearchWords = state.SearchQuery,
+            Sources = searchResult.Results,
+            Images = searchResult.Images ?? new List<string>()
         });
     }
 
@@ -130,10 +134,10 @@ public class DeepResearchService
         var result = await _aiChatClient.CompleteChatAsync(messages);
         state.RunningSummary = result.Value.Content.First().Text.Trim();
 
-        // クライアントに通知
-        NotifyProgress(ProgressTypes.Summarize, new
+        // 通知
+        NotifyProgress(new SummarizeProgress
         {
-            summary = state.RunningSummary
+            Summary = state.RunningSummary
         });
     }
 
@@ -150,8 +154,8 @@ public class DeepResearchService
         try
         {
             var obj = System.Text.Json.JsonDocument.Parse(textResult).RootElement;
-            state.SearchQuery = obj.GetProperty("follow_up_query").GetString();
-            state.KnowledgeGap = obj.GetProperty("knowledge_gap").GetString();
+            state.SearchQuery = obj.GetProperty("follow_up_query").GetString() ?? "";
+            state.KnowledgeGap = obj.GetProperty("knowledge_gap").GetString() ?? "";
         }
         catch
         {
@@ -159,11 +163,11 @@ public class DeepResearchService
             state.KnowledgeGap = "Unable to identify specific knowledge gap";
         }
 
-        // クライアントに通知
-        NotifyProgress(ProgressTypes.Reflection, new
+        // 通知
+        NotifyProgress(new ReflectionProgress
         {
-            query = state.SearchQuery,
-            knowledge_gap = state.KnowledgeGap
+            Query = state.SearchQuery,
+            KnowledgeGap = state.KnowledgeGap
         });
     }
 
@@ -177,24 +181,19 @@ public class DeepResearchService
         }
         state.RunningSummary = finalSummary;
 
-        // クライアントに通知（画像URLも含める）
-        NotifyProgress(ProgressTypes.Finalize, new
+        // 通知
+        NotifyProgress(new FinalizeProgress
         {
-            summary = state.RunningSummary,
-            images = state.Images
+            Summary = state.RunningSummary,
+            Images = state.Images
         });
 
         return Task.CompletedTask;
     }
 
-    // 進行状況通知のヘルパーメソッド
-    private void NotifyProgress(string type, object data)
+    // 型安全な進行状況通知のヘルパーメソッド
+    private void NotifyProgress(ProgressBase progress)
     {
-        _onProgressChanged?.Invoke(new ResearchProgress
-        {
-            Type = type,
-            Data = data,
-            Step = type
-        });
+        _onProgressChanged?.Invoke(progress);
     }
 }

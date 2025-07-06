@@ -51,7 +51,6 @@ builder.Services.AddScoped<ISearchClient>(provider =>
 });
 
 // Add research services
-builder.Services.AddSingleton<ResearchProgressService>();
 builder.Services.AddScoped<WebResearchService>();
 
 var app = builder.Build();
@@ -71,8 +70,5 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-// Map API controllers
-app.MapControllers();
 
 app.Run();

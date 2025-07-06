@@ -39,64 +39,46 @@ var ChatClient = new AzureOpenAIClient(
 ).GetChatClient("o4-mini");
 
 // 進捗状況を表示するイベントハンドラー
-void OnProgressChanged(ResearchProgress progress)
+void OnProgressChanged(ProgressBase progress)
 {
     var timestamp = progress.Timestamp.ToString("HH:mm:ss");
 
-    switch (progress.Type)
+    switch (progress)
     {
-        case ProgressTypes.GenerateQuery:
+        case QueryGenerationProgress queryProgress:
             Console.WriteLine($"[{timestamp}] 🔍 検索クエリを生成中...");
-            if (progress.Data is System.Text.Json.JsonElement json && json.TryGetProperty("query", out var query))
-            {
-                Console.WriteLine($"  → 検索クエリ: {query.GetString()}");
-            }
+            Console.WriteLine($"  → 検索クエリ: {queryProgress.Query}");
             break;
 
-        case ProgressTypes.WebResearch:
+        case WebResearchProgress webProgress:
             Console.WriteLine($"[{timestamp}] 🌐 Web検索を実行中...");
             break;
 
-        case ProgressTypes.Summarize:
+        case SummarizeProgress summarizeProgress:
             Console.WriteLine($"[{timestamp}] 📝 検索結果を要約中...");
             break;
 
-        case ProgressTypes.Reflection:
+        case ReflectionProgress reflectionProgress:
             Console.WriteLine($"[{timestamp}] 🤔 調査結果を分析中...");
             break;
 
-        case ProgressTypes.Routing:
+        case RoutingProgress routingProgress:
             Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中...");
             break;
 
-        case ProgressTypes.Finalize:
+        case FinalizeProgress finalizeProgress:
             Console.WriteLine($"[{timestamp}] ✅ 最終レポートを作成中...");
-            if (progress.Data is System.Text.Json.JsonElement finalizeJson &&
-                finalizeJson.TryGetProperty("images", out var imagesElement) &&
-                imagesElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            if (finalizeProgress.Images.Any())
             {
-                var imageUrls = new List<string>();
-                foreach (var imageElement in imagesElement.EnumerateArray())
+                Console.WriteLine($"  → 画像が見つかりました ({finalizeProgress.Images.Count}枚):");
+                for (int i = 0; i < finalizeProgress.Images.Count; i++)
                 {
-                    var imageUrl = imageElement.GetString();
-                    if (!string.IsNullOrEmpty(imageUrl))
-                    {
-                        imageUrls.Add(imageUrl);
-                    }
-                }
-
-                if (imageUrls.Any())
-                {
-                    Console.WriteLine($"  → 画像が見つかりました ({imageUrls.Count}枚):");
-                    for (int i = 0; i < imageUrls.Count; i++)
-                    {
-                        Console.WriteLine($"    {i + 1}. {imageUrls[i]}");
-                    }
+                    Console.WriteLine($"    {i + 1}. {finalizeProgress.Images[i]}");
                 }
             }
             break;
 
-        case ProgressTypes.ResearchComplete:
+        case ResearchCompleteProgress completeProgress:
             Console.WriteLine($"[{timestamp}] 🎉 調査が完了しました！");
             break;
 
