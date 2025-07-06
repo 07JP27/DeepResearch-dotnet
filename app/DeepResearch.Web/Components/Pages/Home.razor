@@ -182,6 +182,9 @@
                 var rationale = data.GetProperty("rationale").GetString() ?? "";
                 content = $"<strong>検索クエリ:</strong> {query}<br><strong>根拠:</strong> {rationale}";
                 break;
+            case ProgressTypes.Routing:
+                content = $"<strong>次の処理を判断中</strong>";
+                break;
             case ProgressTypes.WebResearch:
                 if (data.TryGetProperty("sources", out var sources))
                 {
@@ -242,6 +245,7 @@
     {
         ProgressTypes.Thinking => "text-yellow-500",
         ProgressTypes.GenerateQuery => "text-blue-500",
+        ProgressTypes.Routing => "text-gray-500",
         ProgressTypes.WebResearch => "text-purple-500",
         ProgressTypes.Summarize => "text-green-500",
         ProgressTypes.Reflection => "text-orange-500",
@@ -255,6 +259,7 @@
     {
         ProgressTypes.Thinking => "💭",
         ProgressTypes.GenerateQuery => "🔍",
+        ProgressTypes.Routing => "🔀",
         ProgressTypes.WebResearch => "🌐",
         ProgressTypes.Summarize => "📝",
         ProgressTypes.Reflection => "🤔",
@@ -268,6 +273,7 @@
     {
         ProgressTypes.Thinking => "思考中",
         ProgressTypes.GenerateQuery => "検索クエリ生成",
+        ProgressTypes.Routing => "処理のルーティング",
         ProgressTypes.WebResearch => "Web検索",
         ProgressTypes.Summarize => "要約作成",
         ProgressTypes.Reflection => "反省・知識ギャップ分析",
