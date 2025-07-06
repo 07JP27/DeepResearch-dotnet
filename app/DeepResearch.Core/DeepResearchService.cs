@@ -186,11 +186,7 @@ public class DeepResearchService
         }
         state.RunningSummary = finalSummary;
 
-        NotifyProgress(new FinalizeProgress
-        {
-            Summary = state.RunningSummary,
-            Images = state.Images
-        });
+        NotifyProgress(new FinalizeProgress());
 
         return Task.CompletedTask;
     }

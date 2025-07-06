@@ -215,9 +215,6 @@
                 var finalizeProgress = DeserializeProgressData<FinalizeProgress>(message);
                 if (finalizeProgress != null)
                 {
-                    finalReport = finalizeProgress.Summary;
-                    finalImages.Clear();
-                    finalImages.AddRange(finalizeProgress.Images);
                     content = "<strong>最終レポートを準備中...</strong>";
                 }
                 break;

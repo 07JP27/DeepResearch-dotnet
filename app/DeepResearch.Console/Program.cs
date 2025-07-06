@@ -74,14 +74,6 @@ void OnProgressChanged(ProgressBase progress)
 
         case FinalizeProgress finalizeProgress:
             Console.WriteLine($"[{timestamp}] ✅ 最終レポートを作成中...");
-            if (finalizeProgress.Images.Any())
-            {
-                Console.WriteLine($"  → 画像が見つかりました ({finalizeProgress.Images.Count}枚):");
-                for (int i = 0; i < finalizeProgress.Images.Count; i++)
-                {
-                    Console.WriteLine($"    {i + 1}. {finalizeProgress.Images[i]}");
-                }
-            }
             break;
 
         case ResearchCompleteProgress completeProgress:
