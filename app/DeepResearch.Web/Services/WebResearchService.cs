@@ -25,7 +25,7 @@ public class WebResearchService
         _searchClient = searchClient;
     }
 
-    public async Task StartResearchAsync(string topic, CancellationToken cancellationToken = default)
+    public async Task<ResearchResult?> StartResearchAsync(string topic, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -33,19 +33,19 @@ public class WebResearchService
             if (_chatClient == null)
             {
                 NotifyClient(new ErrorProgress { Message = "Azure OpenAI設定が不完全です。" });
-                return;
+                return null;
             }
 
             if (_searchClient == null)
             {
                 NotifyClient(new ErrorProgress { Message = "Tavily API設定が不完全です。" });
-                return;
+                return null;
             }
 
             if (string.IsNullOrWhiteSpace(topic))
             {
                 NotifyClient(new ErrorProgress { Message = "トピックは必須です。" });
-                return;
+                return null;
             }
 
             NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
@@ -62,12 +62,13 @@ public class WebResearchService
                 reseachOption
             );
 
-            await researchService.RunResearchAsync(topic, cancellationToken);
+            return await researchService.RunResearchAsync(topic, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
             NotifyClient(new ErrorProgress { Message = $"エラーが発生しました: {ex.Message}" });
+            return null;
         }
     }
 

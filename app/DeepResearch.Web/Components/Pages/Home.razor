@@ -2,6 +2,7 @@
 @using DeepResearch.Core
 @using DeepResearch.Core.Models
 @using System.Text.Json
+@using DeepResearch.SearchClient
 @using DeepResearch.Web.Services
 @using Markdig
 @inject IJSRuntime JSRuntime
@@ -48,7 +49,7 @@
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         <!-- Research Input Form -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-4">調査トピックを入力してください</h2>
@@ -104,40 +105,56 @@
         }
 
         <!-- Final Research Report -->
-        @if (!string.IsNullOrEmpty(finalReport))
+        @if (researchResult != null)
         {
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="text-2xl font-semibold text-gray-900 mb-4">調査レポート</h3>
+                
+                <hr class="my-6 border-gray-200" />
+
+                <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">調査トピック</h4>
+                <p class="text-gray-700 mb-4">@researchResult.ResearchTopic</p>
+
+                <hr class="my-6 border-gray-200" />
+
+                <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">調査サマリー</h4>
+                <div class="prose max-w-none">
+                    @((MarkupString)(!string.IsNullOrEmpty(researchResult.Summary) ? Markdown.ToHtml(researchResult.Summary) : ""))
+                </div>
+
+                <hr class="my-6 border-gray-200" />
+
+                @if(researchResult.Sources.Any())
+                {
+                    <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">参考文献</h4>
+                    <ul class="list-disc list-inside mb-6">
+                        @foreach (var source in researchResult.Sources)
+                        {
+                            <li>
+                                <a href="@source.Url" target="_blank" class="text-blue-600 hover:underline">
+                                    @source.Title
+                                </a>
+                            </li>
+                        }   
+                    </ul>
+                }
 
                 <!-- Images Section -->
-                @if (finalImages.Any())
+                @if (researchResult.Images.Any())
                 {
                     <div class="mb-6">
-                        @if (finalImages.Count >= 2)
-                        {
-                            <div class="flex flex-col md:flex-row gap-4 mb-6">
-                                <div class="w-full md:w-1/2">
-                                    <img src="@finalImages[0]" alt="Research image 1" class="w-full h-auto rounded-lg shadow-md" />
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">関連画像</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            @foreach (var image in researchResult.Images)
+                            {
+                                <div class="rounded-lg overflow-hidden shadow-md">
+                                    <img src="@image" alt="Research Image" class="w-full h-auto object-cover" />
                                 </div>
-                                <div class="w-full md:w-1/2">
-                                    <img src="@finalImages[1]" alt="Research image 2" class="w-full h-auto rounded-lg shadow-md" />
-                                </div>
-                            </div>
-                        }
-                        else if (finalImages.Count == 1)
-                        {
-                            <div class="flex justify-center mb-6">
-                                <div class="w-full max-w-lg">
-                                    <img src="@finalImages[0]" alt="Research image" class="w-full h-auto rounded-lg shadow-md" />
-                                </div>
-                            </div>
-                        }
+                            }
+                        </div>
                     </div>
                 }
 
-                <div class="prose max-w-none">
-                    @((MarkupString)(!string.IsNullOrEmpty(finalReport) ? Markdown.ToHtml(finalReport) : ""))
-                </div>
             </div>
         }
     </main>
@@ -146,8 +163,7 @@
 @code {
     private string researchTopic = "";
     private bool isResearching = false;
-    private string finalReport = "";
-    private List<string> finalImages = new();
+    private ResearchResult? researchResult = null;
 
 
     private async Task StartResearch()
@@ -156,7 +172,7 @@
         {
             _researchService.OnProgressUpdated += TriggerStateHasChanged;
             isResearching = true;
-            await _researchService.StartResearchAsync(researchTopic);            
+            researchResult = await _researchService.StartResearchAsync(researchTopic);            
         }
         catch (Exception ex)
         {
@@ -246,12 +262,6 @@
                 var researchCompleteProgress = DeserializeProgressData<ResearchCompleteProgress>(message);
                 if (researchCompleteProgress != null)
                 {
-                    if (!string.IsNullOrEmpty(researchCompleteProgress.FinalSummary))
-                    {
-                        finalReport = researchCompleteProgress.FinalSummary;
-                    }
-                    finalImages.Clear();
-                    finalImages.AddRange(researchCompleteProgress.Images);
                     content = "<strong>調査が完了しました！</strong>";
                 }
                 break;

@@ -69,6 +69,11 @@ var ChatClient = new AzureOpenAIClient(
     new DefaultAzureCredential()
 ).GetChatClient("o4-mini");
 
+void OnProgressChanged(ProgressBase progress)
+{
+  // Handle progress updates here
+}
+
 var options = new DeepResearchOptions
 {
     MaxResearchLoops = 3, // 最大ループ数
@@ -87,10 +92,78 @@ var result = await service.RunResearchAsync(researchTopic, CancellationToken.Non
 Console.WriteLine("\n" + new string('=', 50));
 Console.WriteLine("📋 調査結果");
 Console.WriteLine(new string('=', 50));
-Console.WriteLine(result.RunningSummary);
+Console.WriteLine(result.Summary);
 
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();
+```
+
+## 戻り値と逐次通知
+
+DeepResearchService は、調査が完了した際に ResearchResult 型のオブジェクトを返します。
+このオブジェクトには、調査の要約や関連する情報が含まれています。
+
+- ResearchTopic : 調査対象のトピック
+- Summary : 調査の最終レポート
+- Sources : 調査中に収集された情報のリスト
+- Images : 調査中に収集された画像のリスト
+
+また、DeepResearchService のコンストラクタ引数で onProgressChanged コールバックを指定することで、調査の通知状況をリアルタイムで受け取ることができます。
+逐次通知は ProgressBase を継承した各ステップごとのクラスが定義されています。
+
+- QueryGenerationProgress: クエリ生成完了の通知クラス
+- WebResearchProgress: Web 検索完了の通知クラス
+- SummarizeProgress: 検索結果の要約完了の通知クラス
+- ReflectionProgress: 知識ギャップの補完完了の通知クラス
+- RoutingProgress: 次の処理の判定完了の通知クラス
+- FinalizeProgress: 調査レポートの作成開始の通知クラス
+- ResearchCompleteProgress: 調査レポートの作成完了の通知クラス
+- ErrorProgress: 調査中にエラーが発生した際の通知クラス
+
+例えば以下のように通知クラスを受けとってハンドルすることができます。
+
+```csharp
+void OnProgressChanged(ProgressBase progress)
+{
+    switch (progress)
+    {
+        case QueryGenerationProgress queryProgress:
+            Console.WriteLine($"クエリを生成: {queryProgress.Query}");
+            Console.WriteLine($"クエリ生成の理由: {queryProgress.Rationale}");
+            break;
+        case WebResearchProgress webProgress:
+            Console.WriteLine($"Web検索完了： {webProgress.Sources.Count} 件のソースを取得");
+            Console.WriteLine($"Web検索完了： {webProgress.Images.Count} 枚の画像を取得");
+            break;
+        case SummarizeProgress summarizeProgress:
+            Console.WriteLine($"要約: {summarizeProgress.Summary}");
+            break;
+        case ReflectionProgress reflectionProgress:
+            Console.WriteLine("リフレクション完了");
+            Console.WriteLine($"知識ギャップ: {reflectionProgress.KnowledgeGap}");
+            Console.WriteLine($"追加検索クエリ: {reflectionProgress.Query}");
+            break;
+        case RoutingProgress routingProgress:
+            Console.WriteLine($"ルートの決定 {routingProgress.Decision}");
+            Console.WriteLine($"ループ思考回数 {routingProgress.LoopCount}");
+            break;
+        case FinalizeProgress finalizeProgress:
+            Console.WriteLine("最終レポートの作成中.");
+            break;
+        case ResearchCompleteProgress completeProgress:
+            Console.WriteLine("調査の完了");
+            Console.WriteLine($"Final Summary: {completeProgress.FinalSummary}");
+            Console.WriteLine($"参考情報: {string.Join(", ", completeProgress.Sources)}");
+            Console.WriteLine($"画像: {string.Join(", ", completeProgress.Images)}");
+            break;
+        case ErrorProgress errorProgress:
+            Console.WriteLine($"エラーが発生しました。: {errorProgress.Message}");
+            break;
+        default:
+            Console.WriteLine("不明な通知型");
+            break;
+    }
+}
 ```
 
 ## サンプルクライアント

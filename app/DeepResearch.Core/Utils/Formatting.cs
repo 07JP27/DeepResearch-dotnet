@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using DeepResearch.SearchClient;
@@ -75,6 +76,43 @@ internal static class Formatting
             lines.Add($"* {title} : {url}");
         }
         return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// 新しいソースを既存のソースと重複排除し、テキストをクリーニングします。
+    /// </summary>
+    /// <param name="newSources">新しく追加するソースリスト</param>
+    /// <param name="existingSources">既存のソースリスト</param>
+    /// <returns>重複排除・クリーニング済みの新しいソースリスト</returns>
+    internal static List<SearchResultItem> DeduplicateAndCleanSources(
+        List<SearchResultItem> newSources,
+        List<SearchResultItem> existingSources)
+    {
+        // Create a set of existing URLs for quick lookup
+        var existingUrls = new HashSet<string>(existingSources.Select(s => s.Url));
+
+        var deduplicatedSources = new List<SearchResultItem>();
+
+        foreach (var source in newSources)
+        {
+            // Skip if URL already exists
+            if (string.IsNullOrEmpty(source.Url) || existingUrls.Contains(source.Url))
+                continue;
+
+            // Clean the source data
+            var cleanedSource = new SearchResultItem
+            {
+                Title = CleanGarbledText(source.Title),
+                Url = source.Url,
+                Content = CleanGarbledText(source.Content),
+                RawContent = CleanGarbledText(source.RawContent)
+            };
+
+            deduplicatedSources.Add(cleanedSource);
+            existingUrls.Add(source.Url); // Add to set to prevent duplicates within this batch
+        }
+
+        return deduplicatedSources;
     }
 
     /// <summary>

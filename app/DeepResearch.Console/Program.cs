@@ -99,7 +99,7 @@ var result = await service.RunResearchAsync(researchTopic, CancellationToken.Non
 Console.WriteLine("\n" + new string('=', 50));
 Console.WriteLine("📋 調査結果");
 Console.WriteLine(new string('=', 50));
-Console.WriteLine(result.RunningSummary);
+Console.WriteLine(result.Summary);
 
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();
