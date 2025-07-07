@@ -72,7 +72,7 @@ var ChatClient = new AzureOpenAIClient(
 var options = new DeepResearchOptions
 {
     MaxResearchLoops = 3, // Maximum number of loops
-    MaxTokensPerSource = 1000, // Maximum tokens per source
+    MaxCharacterPerSource = 1000, // Maximum character count per source
     MaxSourceCountPerSearch = 5 // Maximum number of sources per search
 };
 

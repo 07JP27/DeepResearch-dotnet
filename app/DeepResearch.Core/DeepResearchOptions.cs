@@ -9,10 +9,11 @@ public class DeepResearchOptions
     public int MaxResearchLoops { get; set; } = 3;
 
     /// <summary>
-    /// Maximum number of tokens to process per source.
+    /// Maximum number of character to process per source.
+    /// The overflowing characters will be truncated.
     /// </summary>
     /// <example>1000</example>
-    public int MaxTokensPerSource { get; set; } = 1000;
+    public int MaxCharacterPerSource { get; set; } = 4000;
 
     /// <summary>
     /// Maximum number of sources to gather per one search.
