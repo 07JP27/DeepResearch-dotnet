@@ -11,7 +11,7 @@ public class DeepResearchService
     private readonly ChatClient _aiChatClient;
     private readonly ISearchClient _searchClient;
     private readonly int _maxLoops;
-    private readonly int _maxTokensPerSource;
+    private readonly int _maxCharacterPerSource;
     private readonly int _maxSourceCountPerSearch;
 
     private readonly Action<ProgressBase>? _onProgressChanged;
@@ -43,7 +43,7 @@ public class DeepResearchService
 
         options ??= new DeepResearchOptions();
         _maxLoops = options.MaxResearchLoops;
-        _maxTokensPerSource = options.MaxTokensPerSource;
+        _maxCharacterPerSource = options.MaxCharacterPerSource;
         _maxSourceCountPerSearch = options.MaxSourceCountPerSearch;
     }
 
@@ -117,7 +117,7 @@ public class DeepResearchService
             cancellationToken: cancellationToken);
         state.Images.AddRange(searchResult.Images ?? new List<string>());
         state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
-        state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxTokensPerSource));
+        state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxCharacterPerSource));
 
         NotifyProgress(new WebResearchProgress
         {

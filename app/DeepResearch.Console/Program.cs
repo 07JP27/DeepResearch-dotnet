@@ -89,7 +89,7 @@ void OnProgressChanged(ProgressBase progress)
 var options = new DeepResearchOptions
 {
     MaxResearchLoops = 3, // 最大ループ数
-    MaxTokensPerSource = 1000, // ソースごとの最大トークン数
+    MaxCharacterPerSource = 1000, // ソースごとの最大文字数
     MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
 };
 
