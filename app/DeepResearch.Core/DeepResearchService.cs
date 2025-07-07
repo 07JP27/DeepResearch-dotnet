@@ -47,7 +47,7 @@ public class DeepResearchService
         _maxSourceCountPerSearch = options.MaxSourceCountPerSearch;
     }
 
-    public async Task<ResearchState> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
+    public async Task<ResearchResult> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
     {
         var state = new ResearchState { ResearchTopic = topic };
 
@@ -78,10 +78,17 @@ public class DeepResearchService
         NotifyProgress(new ResearchCompleteProgress
         {
             FinalSummary = state.RunningSummary,
+            Sources = state.SourcesGathered,
             Images = state.Images
         });
 
-        return state;
+        return new ResearchResult
+        {
+            ResearchTopic = state.ResearchTopic,
+            Summary = state.RunningSummary,
+            Sources = state.SourcesGathered,
+            Images = state.Images
+        };
     }
 
     private async Task GenerateQueryAsync(ResearchState state, CancellationToken cancellationToken = default)
@@ -116,7 +123,11 @@ public class DeepResearchService
             maxResults: _maxSourceCountPerSearch,
             cancellationToken: cancellationToken);
         state.Images.AddRange(searchResult.Images ?? new List<string>());
-        state.SourcesGathered.Add(Formatting.FormatSources(searchResult));
+
+        // Add deduplicated and cleaned sources to SourcesGathered
+        var newSources = Formatting.DeduplicateAndCleanSources(searchResult.Results, state.SourcesGathered);
+        state.SourcesGathered.AddRange(newSources);
+
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxCharacterPerSource));
 
         NotifyProgress(new WebResearchProgress
@@ -179,12 +190,8 @@ public class DeepResearchService
 
     private Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
-        var finalSummary = $"## Summary\n{state.RunningSummary}\n\n### Sources:\n";
-        foreach (var source in state.SourcesGathered)
-        {
-            finalSummary += $"{source}\n";
-        }
-        state.RunningSummary = finalSummary;
+        // Keep summary pure without appending sources
+        // Sources will be provided separately in ResearchResult.Sources
 
         NotifyProgress(new FinalizeProgress());
 

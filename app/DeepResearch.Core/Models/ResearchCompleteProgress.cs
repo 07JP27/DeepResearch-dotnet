@@ -1,3 +1,5 @@
+using DeepResearch.SearchClient;
+
 namespace DeepResearch.Core.Models;
 
 public class ResearchCompleteProgress : ProgressBase
@@ -7,5 +9,6 @@ public class ResearchCompleteProgress : ProgressBase
     }
 
     public string? FinalSummary { get; set; }
+    public List<SearchResultItem> Sources { get; set; } = new();
     public List<string> Images { get; set; } = new();
 }

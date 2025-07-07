@@ -69,6 +69,11 @@ var ChatClient = new AzureOpenAIClient(
     new DefaultAzureCredential()
 ).GetChatClient("o4-mini");
 
+void OnProgressChanged(ProgressBase progress)
+{
+  // Handle progress updates here
+}
+
 var options = new DeepResearchOptions
 {
     MaxResearchLoops = 3, // Maximum number of loops
@@ -87,10 +92,78 @@ var result = await service.RunResearchAsync(researchTopic, CancellationToken.Non
 Console.WriteLine("\n" + new string('=', 50));
 Console.WriteLine("📋 Research Results");
 Console.WriteLine(new string('=', 50));
-Console.WriteLine(result.RunningSummary);
+Console.WriteLine(result.Summary);
 
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();
+```
+
+## Return Values and Progress Notifications
+
+DeepResearchService returns a ResearchResult object when the research is completed.
+This object contains the research summary and related information.
+
+- ResearchTopic: The topic of the research
+- Summary: The final research report
+- Sources: List of information collected during the research
+- Images: List of images collected during the research
+
+Additionally, by specifying the onProgressChanged callback in the DeepResearchService constructor arguments, you can receive real-time notifications of the research status.
+Progressive notifications are defined as classes for each step that inherit from ProgressBase.
+
+- QueryGenerationProgress: Notification class for query generation completion
+- WebResearchProgress: Notification class for web search completion
+- SummarizeProgress: Notification class for search result summarization completion
+- ReflectionProgress: Notification class for knowledge gap analysis completion
+- RoutingProgress: Notification class for next process determination completion
+- FinalizeProgress: Notification class for research report creation start
+- ResearchCompleteProgress: Notification class for research report creation completion
+- ErrorProgress: Notification class for errors that occur during research
+
+For example, you can receive and handle notification classes as follows:
+
+```csharp
+void OnProgressChanged(ProgressBase progress)
+{
+    switch (progress)
+    {
+        case QueryGenerationProgress queryProgress:
+            Console.WriteLine($"Query generated: {queryProgress.Query}");
+            Console.WriteLine($"Query generation rationale: {queryProgress.Rationale}");
+            break;
+        case WebResearchProgress webProgress:
+            Console.WriteLine($"Web search completed: Retrieved {webProgress.Sources.Count} sources");
+            Console.WriteLine($"Web search completed: Retrieved {webProgress.Images.Count} images");
+            break;
+        case SummarizeProgress summarizeProgress:
+            Console.WriteLine($"Summary: {summarizeProgress.Summary}");
+            break;
+        case ReflectionProgress reflectionProgress:
+            Console.WriteLine("Reflection completed");
+            Console.WriteLine($"Knowledge gap: {reflectionProgress.KnowledgeGap}");
+            Console.WriteLine($"Additional search query: {reflectionProgress.Query}");
+            break;
+        case RoutingProgress routingProgress:
+            Console.WriteLine($"Route decision: {routingProgress.Decision}");
+            Console.WriteLine($"Loop iteration count: {routingProgress.LoopCount}");
+            break;
+        case FinalizeProgress finalizeProgress:
+            Console.WriteLine("Creating final report...");
+            break;
+        case ResearchCompleteProgress completeProgress:
+            Console.WriteLine("Research completed");
+            Console.WriteLine($"Final Summary: {completeProgress.FinalSummary}");
+            Console.WriteLine($"Reference information: {string.Join(", ", completeProgress.Sources)}");
+            Console.WriteLine($"Images: {string.Join(", ", completeProgress.Images)}");
+            break;
+        case ErrorProgress errorProgress:
+            Console.WriteLine($"An error occurred: {errorProgress.Message}");
+            break;
+        default:
+            Console.WriteLine("Unknown notification type");
+            break;
+    }
+}
 ```
 
 ## Sample Clients
