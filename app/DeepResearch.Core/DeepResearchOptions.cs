@@ -20,4 +20,11 @@ public class DeepResearchOptions
     /// </summary>
     /// <example>5</example>
     public int MaxSourceCountPerSearch { get; set; } = 5;
+
+    /// <summary>
+    /// Flag to combine all the individual summaries to generate a final summary
+    /// </summary>
+    /// <example>true</example>
+    public bool EnableSummaryConsolidation { get; set; } = false;
+
 }
