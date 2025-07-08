@@ -16,4 +16,5 @@ internal class ResearchState
     public List<string> Images { get; set; } = new();
     public string KnowledgeGap { get; set; } = string.Empty;
     public string QueryRationale { get; set; } = string.Empty;
+    public List<string> SummariesGathered { get; set; } = new();
 }

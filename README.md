@@ -78,7 +78,8 @@ var options = new DeepResearchOptions
 {
     MaxResearchLoops = 3, // Maximum number of loops
     MaxCharacterPerSource = 1000, // Maximum character count per source
-    MaxSourceCountPerSearch = 5 // Maximum number of sources per search
+    MaxSourceCountPerSearch = 5, // Maximum number of sources per search
+    EnableSummaryConsolidation = true // A flag indicating whether to integrate all step summaries into the final answer. If set to True, adjust the above three parameters with consideration for the context length limit.
 };
 
 Console.WriteLine("Deep Research Console");

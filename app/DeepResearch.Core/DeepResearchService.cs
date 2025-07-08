@@ -10,10 +10,7 @@ public class DeepResearchService
 {
     private readonly ChatClient _aiChatClient;
     private readonly ISearchClient _searchClient;
-    private readonly int _maxLoops;
-    private readonly int _maxCharacterPerSource;
-    private readonly int _maxSourceCountPerSearch;
-
+    private readonly DeepResearchOptions _researchOptions;
     private readonly Action<ProgressBase>? _onProgressChanged;
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -42,9 +39,7 @@ public class DeepResearchService
         _onProgressChanged = onProgressChanged;
 
         options ??= new DeepResearchOptions();
-        _maxLoops = options.MaxResearchLoops;
-        _maxCharacterPerSource = options.MaxCharacterPerSource;
-        _maxSourceCountPerSearch = options.MaxSourceCountPerSearch;
+        _researchOptions = options;
     }
 
     public async Task<ResearchResult> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
@@ -53,7 +48,7 @@ public class DeepResearchService
 
         await GenerateQueryAsync(state, cancellationToken);
 
-        while (state.ResearchLoopCount < _maxLoops)
+        while (state.ResearchLoopCount < _researchOptions.MaxResearchLoops)
         {
             NotifyProgress(new RoutingProgress
             {
@@ -120,7 +115,7 @@ public class DeepResearchService
     {
         var searchResult = await _searchClient.SearchAsync(
             query: state.SearchQuery,
-            maxResults: _maxSourceCountPerSearch,
+            maxResults: _researchOptions.MaxSourceCountPerSearch,
             cancellationToken: cancellationToken);
         state.Images.AddRange(searchResult.Images ?? new List<string>());
 
@@ -128,7 +123,7 @@ public class DeepResearchService
         var newSources = Formatting.DeduplicateAndCleanSources(searchResult.Results, state.SourcesGathered);
         state.SourcesGathered.AddRange(newSources);
 
-        state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _maxCharacterPerSource));
+        state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _researchOptions.MaxCharacterPerSource));
 
         NotifyProgress(new WebResearchProgress
         {
@@ -156,6 +151,7 @@ public class DeepResearchService
         };
         var result = await _aiChatClient.CompleteChatAsync(messages);
         state.RunningSummary = result.Value.Content.First().Text.Trim();
+        state.SummariesGathered.Add(state.RunningSummary);
 
         NotifyProgress(new SummarizeProgress
         {
@@ -188,14 +184,22 @@ public class DeepResearchService
         });
     }
 
-    private Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
+    private async Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
-        // Keep summary pure without appending sources
-        // Sources will be provided separately in ResearchResult.Sources
-
         NotifyProgress(new FinalizeProgress());
 
-        return Task.CompletedTask;
+        if (_researchOptions.EnableSummaryConsolidation)
+        {
+            var prompt = Prompts.FinalizeInstructions(state.SummariesGathered);
+            var messages = new List<ChatMessage>
+            {
+                new SystemChatMessage(prompt),
+                new UserChatMessage($"<TOPIC>{state.ResearchTopic} </TOPIC>")
+            };
+
+            var result = await _aiChatClient.CompleteChatAsync(messages);
+            state.RunningSummary = result.Value.Content.First().Text.Trim();
+        }
     }
 
     private void NotifyProgress(ProgressBase progress)

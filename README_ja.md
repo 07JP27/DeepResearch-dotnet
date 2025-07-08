@@ -78,7 +78,8 @@ var options = new DeepResearchOptions
 {
     MaxResearchLoops = 3, // 最大ループ数
     MaxCharacterPerSource = 1000, // ソースごとの最大文字数
-    MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
+    MaxSourceCountPerSearch = 5, // 検索ごとの最大ソース数
+    EnableSummaryConsolidation = true // 最終回答の生成にすべてのステップサマリーを統合するかどうかのフラグ。Trueにする場合はコンテキスト長の制限に注意して上の３つのパラメーターを調整する。
 };
 
 Console.WriteLine("Deep Research Console");
