@@ -58,11 +58,13 @@ public class WebResearchService
             var researchService = new DeepResearchService(
                 _chatClient,
                 _searchClient,
-                progress => OnProgressChanged(progress).Wait(),
                 reseachOption
             );
 
-            return await researchService.RunResearchAsync(topic, cancellationToken);
+            // 進捗状況を追跡するプログレスオブジェクトを作成
+            var progress = new Progress<ProgressBase>(async progress => await OnProgressChanged(progress));
+
+            return await researchService.RunResearchAsync(topic, progress, cancellationToken);
         }
         catch (Exception ex)
         {

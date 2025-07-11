@@ -93,8 +93,12 @@ var options = new DeepResearchOptions
     MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
 };
 
-var service = new DeepResearchService(ChatClient, searchClient, OnProgressChanged, options);
-var result = await service.RunResearchAsync(researchTopic, CancellationToken.None);
+var service = new DeepResearchService(ChatClient, searchClient, options);
+
+// 進捗状況を追跡するプログレスオブジェクトを作成
+var progress = new Progress<ProgressBase>(OnProgressChanged);
+
+var result = await service.RunResearchAsync(researchTopic, progress, CancellationToken.None);
 
 Console.WriteLine("\n" + new string('=', 50));
 Console.WriteLine("📋 調査結果");
