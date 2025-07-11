@@ -135,6 +135,12 @@ public class DeepResearchService
         {
             state.QueryRetryCount++;
 
+            NotifyProgress(new RoutingProgress
+            {
+                Decision = RoutingDecision.RetrySearch,
+                LoopCount = state.QueryRetryCount
+            });
+
             // Decide whether to use GenerateQueryAsync or ReflectOnSummaryAsync
             if (string.IsNullOrEmpty(state.RunningSummary))
             {

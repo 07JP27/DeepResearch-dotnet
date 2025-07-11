@@ -13,5 +13,6 @@ public class RoutingProgress : ProgressBase
 public enum RoutingDecision
 {
     Continue,
+    RetrySearch,
     Finalize
 }
