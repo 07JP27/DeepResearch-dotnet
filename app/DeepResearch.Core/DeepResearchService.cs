@@ -11,7 +11,6 @@ public class DeepResearchService
     private readonly ChatClient _aiChatClient;
     private readonly ISearchClient _searchClient;
     private readonly DeepResearchOptions _researchOptions;
-    private readonly Action<ProgressBase>? _onProgressChanged;
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
@@ -31,22 +30,20 @@ public class DeepResearchService
     public DeepResearchService(
         ChatClient aiChatClient,
         ISearchClient searchClient,
-        Action<ProgressBase>? onProgressChanged = null,
         DeepResearchOptions? options = null)
     {
         _aiChatClient = aiChatClient;
         _searchClient = searchClient;
-        _onProgressChanged = onProgressChanged;
 
         options ??= new DeepResearchOptions();
         _researchOptions = options;
     }
 
-    public async Task<ResearchResult> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
+    public async Task<ResearchResult> RunResearchAsync(string topic, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
         var state = new ResearchState { ResearchTopic = topic };
 
-        await GenerateQueryAsync(state, cancellationToken);
+        await GenerateQueryAsync(state, progress, cancellationToken);
 
         while (state.ResearchLoopCount < _researchOptions.MaxResearchLoops)
         {
@@ -54,11 +51,11 @@ public class DeepResearchService
             {
                 Decision = RoutingDecision.Continue,
                 LoopCount = state.ResearchLoopCount
-            });
+            }, progress);
 
-            await WebResearchAsync(state, cancellationToken);
-            await SummarizeSourcesAsync(state, cancellationToken);
-            await ReflectOnSummaryAsync(state, cancellationToken);
+            await WebResearchAsync(state, progress, cancellationToken);
+            await SummarizeSourcesAsync(state, progress, cancellationToken);
+            await ReflectOnSummaryAsync(state, progress, cancellationToken);
             state.ResearchLoopCount++;
         }
 
@@ -66,16 +63,16 @@ public class DeepResearchService
         {
             Decision = RoutingDecision.Finalize,
             LoopCount = state.ResearchLoopCount
-        });
+        }, progress);
 
-        await FinalizeSummaryAsync(state, cancellationToken);
+        await FinalizeSummaryAsync(state, progress, cancellationToken);
 
         NotifyProgress(new ResearchCompleteProgress
         {
             FinalSummary = state.RunningSummary,
             Sources = state.SourcesGathered,
             Images = state.Images
-        });
+        }, progress);
 
         return new ResearchResult
         {
@@ -86,7 +83,7 @@ public class DeepResearchService
         };
     }
 
-    private async Task GenerateQueryAsync(ResearchState state, CancellationToken cancellationToken = default)
+    private async Task GenerateQueryAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
     {
         var prompt = string.Format(Prompts.QueryWriterInstructions, DateTime.Now.ToString("MMMM dd, yyyy"), state.ResearchTopic);
         var messages = new List<ChatMessage>
@@ -108,10 +105,10 @@ public class DeepResearchService
         {
             Query = state.SearchQuery,
             Rationale = state.QueryRationale
-        });
+        }, progress);
     }
 
-    private async Task WebResearchAsync(ResearchState state, CancellationToken cancellationToken = default)
+    private async Task WebResearchAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
     {
         var searchResult = await _searchClient.SearchAsync(
             query: state.SearchQuery,
@@ -129,10 +126,10 @@ public class DeepResearchService
         {
             Sources = searchResult.Results,
             Images = searchResult.Images ?? new List<string>()
-        });
+        }, progress);
     }
 
-    private async Task SummarizeSourcesAsync(ResearchState state, CancellationToken cancellationToken = default)
+    private async Task SummarizeSourcesAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
     {
         var mostRecent = state.WebResearchResults.Count > 0 ? state.WebResearchResults[^1] : "";
         string humanMessage;
@@ -156,10 +153,10 @@ public class DeepResearchService
         NotifyProgress(new SummarizeProgress
         {
             Summary = state.RunningSummary
-        });
+        }, progress);
     }
 
-    private async Task ReflectOnSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
+    private async Task ReflectOnSummaryAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
     {
         var prompt = string.Format(Prompts.ReflectionInstructions, state.ResearchTopic);
         var messages = new List<ChatMessage>
@@ -181,12 +178,12 @@ public class DeepResearchService
         {
             Query = state.SearchQuery,
             KnowledgeGap = state.KnowledgeGap
-        });
+        }, progress);
     }
 
-    private async Task FinalizeSummaryAsync(ResearchState state, CancellationToken cancellationToken = default)
+    private async Task FinalizeSummaryAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
     {
-        NotifyProgress(new FinalizeProgress());
+        NotifyProgress(new FinalizeProgress(), progress);
 
         if (_researchOptions.EnableSummaryConsolidation)
         {
@@ -202,8 +199,8 @@ public class DeepResearchService
         }
     }
 
-    private void NotifyProgress(ProgressBase progress)
+    private void NotifyProgress(ProgressBase progressInfo, IProgress<ProgressBase>? progress)
     {
-        _onProgressChanged?.Invoke(progress);
+        progress?.Report(progressInfo);
     }
 }
