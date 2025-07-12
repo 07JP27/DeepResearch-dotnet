@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DeepResearch.Core\DeepResearch.Core.csproj" />
     <ProjectReference Include="..\DeepResearch.SearchClient\DeepResearch.SearchClient.csproj" />
   </ItemGroup>
 

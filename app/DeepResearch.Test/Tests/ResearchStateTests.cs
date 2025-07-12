@@ -1,5 +1,6 @@
 using Xunit;
 using FluentAssertions;
+using DeepResearch.Core;
 using DeepResearch.SearchClient;
 
 namespace DeepResearch.Core.Tests;
