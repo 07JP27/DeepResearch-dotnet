@@ -11,7 +11,7 @@ public class DeepResearchService
     private readonly ChatClient _aiChatClient;
     private readonly ISearchClient _searchClient;
     private readonly DeepResearchOptions _researchOptions;
-    private readonly Action<ProgressBase>? _onProgressChanged;
+    private IProgress<ProgressBase>? _progress;
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
@@ -31,19 +31,18 @@ public class DeepResearchService
     public DeepResearchService(
         ChatClient aiChatClient,
         ISearchClient searchClient,
-        Action<ProgressBase>? onProgressChanged = null,
         DeepResearchOptions? options = null)
     {
         _aiChatClient = aiChatClient;
         _searchClient = searchClient;
-        _onProgressChanged = onProgressChanged;
 
         options ??= new DeepResearchOptions();
         _researchOptions = options;
     }
 
-    public async Task<ResearchResult> RunResearchAsync(string topic, CancellationToken cancellationToken = default)
+    public async Task<ResearchResult> RunResearchAsync(string topic, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
+        _progress = progress;
         var state = new ResearchState { ResearchTopic = topic };
 
         await GenerateQueryAsync(state, cancellationToken);
@@ -258,8 +257,8 @@ public class DeepResearchService
         }
     }
 
-    private void NotifyProgress(ProgressBase progress)
+    private void NotifyProgress(ProgressBase progressInfo)
     {
-        _onProgressChanged?.Invoke(progress);
+        _progress?.Report(progressInfo);
     }
 }
