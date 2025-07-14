@@ -77,7 +77,7 @@ void OnProgressChanged(ProgressBase progress)
                 _ => $"<strong>次の処理を判断:</strong> {decisionText} (ループ {routingProgress.LoopCount + 1})"
             };
 
-            Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中: {content})");
+            Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中: {content}");
 
             break;
 
