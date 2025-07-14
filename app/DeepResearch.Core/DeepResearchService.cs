@@ -132,13 +132,13 @@ public class DeepResearchService
         if ((searchResult.Results == null || searchResult.Results.Count == 0) &&
             state.QueryRetryCount < _researchOptions.MaxSearchRetryAttempts)
         {
-            state.QueryRetryCount++;
-
             NotifyProgress(new RoutingProgress
             {
                 Decision = RoutingDecision.RetrySearch,
                 LoopCount = state.QueryRetryCount
             });
+
+            state.QueryRetryCount++;
 
             // Decide whether to use GenerateQueryAsync or ReflectOnSummaryAsync
             if (string.IsNullOrEmpty(state.RunningSummary))

@@ -67,9 +67,18 @@ void OnProgressChanged(ProgressBase progress)
             {
                 RoutingDecision.Continue => "調査を続行",
                 RoutingDecision.Finalize => "調査を完了",
+                RoutingDecision.RetrySearch => "再検索",
                 _ => routingProgress.Decision.ToString()
             };
-            Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中: {decisionText} (ループ {routingProgress.LoopCount + 1})");
+
+            var content = routingProgress.Decision switch
+            {
+                RoutingDecision.RetrySearch => $"<strong>次の処理を判断:</strong> {decisionText} (リトライ回数：{routingProgress.LoopCount + 1})",
+                _ => $"<strong>次の処理を判断:</strong> {decisionText} (ループ {routingProgress.LoopCount + 1})"
+            };
+
+            Console.WriteLine($"[{timestamp}] 🔄 次のステップを決定中: {content})");
+
             break;
 
         case FinalizeProgress finalizeProgress:
