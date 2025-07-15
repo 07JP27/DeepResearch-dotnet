@@ -34,7 +34,7 @@ jobs:
       working-directory: ./app
       
     - name: Test
-      run: dotnet test --no-build --configuration Release --verbosity normal --logger trx --results-directory ./TestResults
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger "xunit" --results-directory ./TestResults
       working-directory: ./app
       
     - name: Publish test results
@@ -42,15 +42,15 @@ jobs:
       if: always()
       with:
         name: .NET Test Results
-        path: './app/TestResults/*.trx'
-        reporter: dotnet-trx
+        path: './app/TestResults/*.xml'
+        reporter: java-junit
         fail-on-error: true
         
     - name: Post test results as PR comment
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always() && github.event_name == 'pull_request'
       with:
-        files: './app/TestResults/*.trx'
+        files: './app/TestResults/*.xml'
         comment_title: '🧪 .NET Test Results'
         comment_mode: always
         compare_to_earlier_commit: false
