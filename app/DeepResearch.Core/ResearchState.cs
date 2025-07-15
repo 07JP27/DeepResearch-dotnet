@@ -1,4 +1,5 @@
 using DeepResearch.SearchClient;
+using OpenAI.Chat;
 
 namespace DeepResearch.Core;
 
@@ -17,4 +18,7 @@ internal class ResearchState
     public string KnowledgeGap { get; set; } = string.Empty;
     public string QueryRationale { get; set; } = string.Empty;
     public List<string> SummariesGathered { get; set; } = new();
+    public int QueryRetryCount { get; set; } = 0;
+    public List<ChatMessage> QueryGenerationMessages { get; set; } = new();
+    public List<ChatMessage> ReflectionMessages { get; set; } = new();
 }

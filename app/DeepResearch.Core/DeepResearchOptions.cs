@@ -27,4 +27,9 @@ public class DeepResearchOptions
     /// <example>true</example>
     public bool EnableSummaryConsolidation { get; set; } = false;
 
+    /// <summary>
+    /// Maximum number of query regeneration attempts when search returns no results.
+    /// </summary>
+    /// <example>3</example>
+    public int MaxSearchRetryAttempts { get; set; } = 3;
 }
