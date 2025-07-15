@@ -18,7 +18,6 @@ public class DeepResearchService
         PropertyNameCaseInsensitive = true
     };
 
-#if NET9_0_OR_GREATER
     private static readonly ChatCompletionOptions _reflectionOnSummaryOptions = new()
     {
         ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("ReflectionResponse", JsonSchemaGenerator.GenerateSchemaAsBinaryData(SourceGenerationContext.Default.ReflectionOnSummaryResponse)),
@@ -28,17 +27,6 @@ public class DeepResearchService
     {
         ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("AnalysisAgentResponse", JsonSchemaGenerator.GenerateSchemaAsBinaryData(SourceGenerationContext.Default.GenerateQueryResponse)),
     };
-#else
-    private static readonly ChatCompletionOptions _reflectionOnSummaryOptions = new()
-    {
-        ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat(),
-    };
-
-    private static readonly ChatCompletionOptions _generateQueryOptions = new()
-    {
-        ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat(),
-    };
-#endif
 
     public DeepResearchService(
         ChatClient aiChatClient,
