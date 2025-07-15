@@ -9,9 +9,6 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-@description('Id of the user or app to assign application roles')
-param principalId string
-
 // Optional parameters to override the default OpenAI settings
 @description('Location for the OpenAI resource group')
 param openAiResourceGroupLocation string = location
@@ -79,11 +76,10 @@ module web './core/host/appservice.bicep' = {
     tags: tags
     appServicePlanId: appServicePlan.outputs.id
     runtimeName: 'dotnet'
-    runtimeVersion: '8.0'
     appSettings: {
-      'OpenAI__Endpoint': openAi.outputs.endpoint
-      'OpenAI__DeploymentName': openAiModelDeployments[0].name
-      'Tavily__ApiKey': tavilyApiKey
+      OpenAI__Endpoint: openAi.outputs.endpoint
+      OpenAI__DeploymentName: openAiModelDeployments[0].name
+      Tavily__ApiKey: tavilyApiKey
     }
     managedIdentity: true
   }

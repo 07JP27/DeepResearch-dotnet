@@ -31,7 +31,7 @@ DeepResearch-dotnet/
 
 1. **Azure OpenAI Service**
 
-   - o4-mini モデルを想定しています
+   - gpt-4o-mini モデルを想定しています
    - エンドポイント URL とデプロイメント名を控えておいてください
 
 2. **Tavily Search API**
@@ -52,6 +52,41 @@ DeepResearch-dotnet/
      }
    }
    ```
+
+## デプロイメント
+
+### Azure Developer CLI (azd) を使用した Azure デプロイメント
+
+Azure Developer CLI (azd) を使用して、このアプリケーションを Azure に簡単にデプロイできます：
+
+1. **事前準備**
+   - [Azure Developer CLI (azd)](https://aka.ms/azure-dev/install) をインストール
+   - [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) をインストール
+   - [Tavily API キー](https://tavily.com/)を取得
+
+2. **Azure にデプロイ**
+   ```bash
+   # リポジトリをクローン
+   git clone https://github.com/07JP27/DeepResearch-dotnet.git
+   cd DeepResearch-dotnet
+
+   # Azure にログイン
+   azd auth login
+
+   # Tavily API キーを設定
+   azd env set TAVILY_API_KEY "your-tavily-api-key-here"
+
+   # インフラストラクチャとアプリケーションをデプロイ
+   azd up
+   ```
+
+3. **デプロイされるリソース**
+   - Web アプリケーションをホストする Azure App Service
+   - gpt-4o-mini モデルを含む Azure OpenAI サービス
+   - セキュアな認証のためのマネージド ID
+   - 新しいリソース グループ内のすべての必要な Azure リソース
+
+`azd up` コマンドは、すべての Azure リソースを作成してアプリケーションをデプロイします。インフラストラクチャは `infra/` ディレクトリ内の Bicep テンプレートで定義されています。
 
 ## 使い方
 
