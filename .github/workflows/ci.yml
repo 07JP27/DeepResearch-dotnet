@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        include-prerelease: true
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      working-directory: ./app
+      
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+      working-directory: ./app
+      
+    - name: Test
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger trx --results-directory ./TestResults
+      working-directory: ./app
+      
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: .NET Test Results
+        path: './app/TestResults/*.trx'
+        reporter: dotnet-trx
+        fail-on-error: true
