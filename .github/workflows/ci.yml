@@ -45,3 +45,12 @@ jobs:
         path: './app/TestResults/*.trx'
         reporter: dotnet-trx
         fail-on-error: true
+        
+    - name: Post test results as PR comment
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always() && github.event_name == 'pull_request'
+      with:
+        files: './app/TestResults/*.trx'
+        comment_title: '🧪 .NET Test Results'
+        comment_mode: update last
+        compare_to_earlier_commit: false
