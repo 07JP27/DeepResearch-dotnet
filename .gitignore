@@ -9,6 +9,9 @@ project.lock.json
 .env
 appsettings.Development.json
 
+# Azure Developer CLI
+.azure/
+
 # Visual Studio Code
 .vscode/
 
