@@ -34,6 +34,10 @@ internal static class Formatting
             }
         }
 
+        // Return empty string if no sources found
+        if (uniqueSources.Count == 0)
+            return string.Empty;
+
         var sb = new StringBuilder();
         sb.AppendLine("Sources:\n");
         foreach (var source in uniqueSources.Values)
@@ -144,19 +148,19 @@ internal static class Formatting
     {
         // 特定の文字化けパターンのみを対象とした置換
         var cleanedText = text
-            // 明らかな文字化けパターンのみを削除（保守的なアプローチ）
+            // 特定の文字化けパターンを先に処理（より具体的なパターンから）
+            .Replace("ã§", "で")
+            .Replace("ã¯", "は")
+            .Replace("ã»", "・")
+            .Replace("ã¾", "ま")
+            .Replace("ã¤", "い")
+            .Replace("ã ", "")
+            // 連続する文字化け文字
+            .Replace("ãã", "")
+            // 単独の文字化け文字（具体的なパターンの後に処理）
             .Replace("ã", "")
             .Replace("â", "")
             .Replace("¿", "")
-            // 連続する文字化け文字
-            .Replace("ãã", "")
-            .Replace("ã§", "で")
-            .Replace("ã¯", "は")
-            .Replace("ã ", "")
-            .Replace("ã»", "・")
-            .Replace("ã¾", "ま")
-            .Replace("ã", "")
-            .Replace("ã¤", "い")
             // 制御文字を削除
             .Replace("\0", "")
             .Replace("\r", "")
