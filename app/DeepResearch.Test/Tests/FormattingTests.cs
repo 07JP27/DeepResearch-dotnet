@@ -3,7 +3,7 @@ using FluentAssertions;
 using DeepResearch.Core;
 using DeepResearch.SearchClient;
 
-namespace DeepResearch.Core.Tests;
+namespace DeepResearch.Tests;
 
 /// <summary>
 /// Unit tests for Formatting static utility class

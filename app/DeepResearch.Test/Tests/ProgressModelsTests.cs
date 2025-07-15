@@ -2,7 +2,7 @@ using Xunit;
 using FluentAssertions;
 using DeepResearch.Core.Models;
 
-namespace DeepResearch.Core.Tests;
+namespace DeepResearch.Tests;
 
 /// <summary>
 /// Unit tests for Progress model classes

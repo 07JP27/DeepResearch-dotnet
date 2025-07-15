@@ -3,7 +3,7 @@ using FluentAssertions;
 using DeepResearch.Core;
 using DeepResearch.Core.JsonSchema;
 
-namespace DeepResearch.Core.Tests;
+namespace DeepResearch.Tests;
 
 /// <summary>
 /// Unit tests for JsonSchema model classes

@@ -3,7 +3,7 @@ using FluentAssertions;
 using DeepResearch.Core;
 using DeepResearch.SearchClient;
 
-namespace DeepResearch.Core.Tests;
+namespace DeepResearch.Tests;
 
 /// <summary>
 /// Unit tests for ResearchState class
@@ -232,13 +232,13 @@ public class ResearchStateTests
         state.SearchQuery = "climate change impacts 2024";
         state.QueryRationale = "Focus on recent climate data";
         state.ResearchLoopCount = 1;
-        
-        state.SourcesGathered.Add(new SearchResultItem 
-        { 
-            Title = "Climate Report", 
-            Url = "https://climate.gov/report" 
+
+        state.SourcesGathered.Add(new SearchResultItem
+        {
+            Title = "Climate Report",
+            Url = "https://climate.gov/report"
         });
-        
+
         state.WebResearchResults.Add("Formatted climate data...");
         state.RunningSummary = "Climate change is accelerating...";
         state.SummariesGathered.Add(state.RunningSummary);
