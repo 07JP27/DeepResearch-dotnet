@@ -52,5 +52,5 @@ jobs:
       with:
         files: './app/TestResults/*.trx'
         comment_title: '🧪 .NET Test Results'
-        comment_mode: update last
+        comment_mode: always
         compare_to_earlier_commit: false
