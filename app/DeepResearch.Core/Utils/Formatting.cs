@@ -19,26 +19,15 @@ internal static class Formatting
         int maxCharacterPerSource,
         bool fetchFullPage = true)
     {
-        if (searchResult == null || searchResult.Results == null)
+        if (searchResult == null || searchResult.Results == null || searchResult.Results is [])
             return string.Empty;
 
         // URLで重複排除
-        var uniqueSources = new Dictionary<string, SearchResultItem>();
-        foreach (var source in searchResult.Results)
-        {
-            if (!string.IsNullOrEmpty(source.Url) && !uniqueSources.ContainsKey(source.Url))
-            {
-                uniqueSources[source.Url] = source;
-            }
-        }
-
-        // Return empty string if no sources found
-        if (uniqueSources.Count == 0)
-            return string.Empty;
+        var uniqueSources = searchResult.Results.DistinctBy(x => x.Url);
 
         var sb = new StringBuilder();
         sb.AppendLine("Sources:\n");
-        foreach (var source in uniqueSources.Values)
+        foreach (var source in uniqueSources)
         {
             string title = !string.IsNullOrEmpty(source.Title) ? CleanGarbledText(source.Title) : "(no title)";
             string url = !string.IsNullOrEmpty(source.Url) ? source.Url : "(no url)";
@@ -48,11 +37,10 @@ internal static class Formatting
             sb.AppendLine($"Most relevant content from source: {content}\n===");
             if (fetchFullPage)
             {
-                int charLimit = maxCharacterPerSource;
                 string rawContent = !string.IsNullOrEmpty(source.RawContent) ? CleanGarbledText(source.RawContent) : "";
-                if (rawContent.Length > charLimit)
+                if (rawContent.Length > maxCharacterPerSource)
                 {
-                    rawContent = rawContent.Substring(0, charLimit) + "... [truncated]";
+                    rawContent = rawContent.Substring(0, maxCharacterPerSource) + "... [truncated]";
                 }
                 sb.AppendLine($"Full source content limited to {maxCharacterPerSource} tokens: {rawContent}\n");
             }
