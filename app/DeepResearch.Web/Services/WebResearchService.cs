@@ -39,15 +39,10 @@ public class WebResearchService
 
             NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
 
-            var reseachOption = new DeepResearchOptions
-            {
-                MaxSourceCountPerSearch = 2,
-            };
-
             // 進捗状況を追跡するプログレスオブジェクトを作成
             var progress = new Progress<ProgressBase>(async progress => await OnProgressChanged(progress));
 
-            return await _deepResearchService.RunResearchAsync(topic, reseachOption, progress, cancellationToken);
+            return await _deepResearchService.RunResearchAsync(topic, new() { MaxSourceCountPerSearch = 2 }, progress, cancellationToken);
         }
         catch (Exception ex)
         {
