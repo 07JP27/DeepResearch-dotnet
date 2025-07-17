@@ -17,8 +17,6 @@
     </AssemblyAttribute>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DeepResearch.SearchClient\DeepResearch.SearchClient.csproj" />
-  </ItemGroup>
+
 
 </Project>

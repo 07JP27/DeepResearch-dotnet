@@ -1,5 +1,3 @@
-using DeepResearch.SearchClient;
-
 namespace DeepResearch.Core.Models;
 
 public class ResearchCompleteProgress : ProgressBase

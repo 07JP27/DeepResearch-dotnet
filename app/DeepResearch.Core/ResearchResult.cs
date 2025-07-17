@@ -1,5 +1,3 @@
-using DeepResearch.SearchClient;
-
 namespace DeepResearch.Core;
 
 /// <summary>

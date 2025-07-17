@@ -1,4 +1,4 @@
-namespace DeepResearch.SearchClient;
+namespace DeepResearch.Core;
 
 public class SearchResult
 {
