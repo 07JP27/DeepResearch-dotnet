@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.Console", "Dee
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.Test", "DeepResearch.Test\DeepResearch.Test.csproj", "{1C25064D-469F-448E-BD22-04D6D0BAB82B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.SearchClient", "DeepResearch.SearchClient\DeepResearch.SearchClient.csproj", "{63C9E4C7-D883-4C15-955E-DAC876A49E99}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{1C25064D-469F-448E-BD22-04D6D0BAB82B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C25064D-469F-448E-BD22-04D6D0BAB82B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1C25064D-469F-448E-BD22-04D6D0BAB82B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
