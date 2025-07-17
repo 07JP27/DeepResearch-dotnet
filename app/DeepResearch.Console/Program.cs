@@ -3,7 +3,6 @@ using DeepResearch.Core.Models;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;
-using System.Linq;
 using Microsoft.Extensions.AI;
 
 // dotnet runで実行する場合は以下の環境変数を設定してください
