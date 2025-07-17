@@ -2,14 +2,14 @@
 
 # DeepResearch.SearchClient
 
-このライブラリは、さまざまな Web 検索サービス向けの統一検索クライアントインターフェース（`ISearchClient`）とその実装を提供します。
+このライブラリは、DeepResearch.Core で定義された検索クライアントインターフェース（`ISearchClient`）の、さまざまな Web 検索サービス向けの実装を提供します。
 現在は Tavily API クライアント実装が含まれています。
 
 ## 特徴
 
 この検索クライアントライブラリは以下の機能を提供します：
 
-- **統一インターフェース**：複数のプロバイダーで一貫した検索操作が可能な `ISearchClient`
+- **統一インターフェース**：複数のプロバイダーで一貫した検索操作が可能な `ISearchClient`（DeepResearch.Core で定義）
 - **Tavily 実装**：高度な検索機能を備えた Tavily API クライアント
 - **拡張性の高い設計**：新しい検索サービス実装の追加が容易
 
@@ -26,7 +26,7 @@
 推奨される利用方法は、`ISearchClient`インターフェースを通じた検索機能の利用です：
 
 ```csharp
-using DeepResearch.SearchClient;
+using DeepResearch.Core.SearchClient;
 using DeepResearch.SearchClient.Tavily;
 
 // Tavilyベースの検索クライアントを作成
