@@ -1,10 +1,6 @@
 namespace DeepResearch.Core.Models;
 
-public class ErrorProgress : ProgressBase
+public class ErrorProgress() : ProgressBase(ProgressTypes.Error)
 {
-    public ErrorProgress() : base(ProgressTypes.Error)
-    {
-    }
-
     public string Message { get; set; } = string.Empty;
 }
