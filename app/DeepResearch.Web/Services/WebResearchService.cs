@@ -1,6 +1,6 @@
 using DeepResearch.Core;
 using DeepResearch.Core.Models;
-using DeepResearch.SearchClient;
+using DeepResearch.Core.SearchClient;
 using OpenAI.Chat;
 using System.Text.Json;
 

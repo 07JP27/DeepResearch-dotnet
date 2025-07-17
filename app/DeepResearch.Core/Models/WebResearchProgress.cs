@@ -1,4 +1,4 @@
-using DeepResearch.SearchClient;
+using DeepResearch.Core.SearchClient;
 
 namespace DeepResearch.Core.Models;
 

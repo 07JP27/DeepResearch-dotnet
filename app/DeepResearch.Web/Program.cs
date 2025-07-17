@@ -1,10 +1,10 @@
 using DeepResearch.Web.Components;
 using DeepResearch.Web.Services;
-using DeepResearch.SearchClient;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using OpenAI.Chat;
+using DeepResearch.Core.SearchClient;
 
 var builder = WebApplication.CreateBuilder(args);
 

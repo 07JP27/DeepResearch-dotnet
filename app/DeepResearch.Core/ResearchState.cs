@@ -1,5 +1,5 @@
-using DeepResearch.SearchClient;
-using OpenAI.Chat;
+using DeepResearch.Core.SearchClient;
+using Microsoft.Extensions.AI;
 
 namespace DeepResearch.Core;
 

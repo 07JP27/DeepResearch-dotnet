@@ -11,13 +11,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.Console", "Dee
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.Test", "DeepResearch.Test\DeepResearch.Test.csproj", "{1C25064D-469F-448E-BD22-04D6D0BAB82B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.SearchClient", "DeepResearch.SearchClient\DeepResearch.SearchClient.csproj", "{5BC610BB-2CF3-1396-864B-2902B75186AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{B267895B-6809-45AB-87C2-1F4EB58762CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -36,5 +35,15 @@ Global
 		{1C25064D-469F-448E-BD22-04D6D0BAB82B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C25064D-469F-448E-BD22-04D6D0BAB82B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1C25064D-469F-448E-BD22-04D6D0BAB82B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BC610BB-2CF3-1396-864B-2902B75186AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BC610BB-2CF3-1396-864B-2902B75186AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BC610BB-2CF3-1396-864B-2902B75186AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BC610BB-2CF3-1396-864B-2902B75186AA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0CFF58B2-F1F8-4F02-90A3-3A6A3E65BFF3}
 	EndGlobalSection
 EndGlobal
