@@ -6,6 +6,7 @@ using Azure.Identity;
 using OpenAI.Chat;
 using DeepResearch.Core.SearchClient;
 using Microsoft.Extensions.AI;
+using DeepResearch.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,8 @@ builder.Services.AddScoped<ISearchClient>(provider =>
     var tavilyClient = provider.GetRequiredService<ITavilyClient>();
     return new DeepResearch.SearchClient.Tavily.TavilySearchClient(tavilyClient);
 });
+
+builder.Services.AddScoped<DeepResearchService>();
 
 // Add research services
 builder.Services.AddScoped<WebResearchService>();
