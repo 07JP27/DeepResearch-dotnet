@@ -4,6 +4,10 @@ internal static partial class Prompts
 {
     internal static string FinalizeInstructions(List<string> summariesGathered)
     {
+        var summariesText = summariesGathered.Count > 0 
+            ? summariesGathered.Select(s => $"<SUMMARY>{s}</SUMMARY>").Aggregate((a, b) => $"{a}\n{b}")
+            : "<SUMMARY>No summaries available</SUMMARY>";
+            
         return
         $"""
         - Your task is to synthesize the piecemeal researched summaries to create a coherent final report.
@@ -15,7 +19,7 @@ internal static partial class Prompts
         - Generate your final report in the same language used in the <TOPIC>.
 
         <SUMMARIES>
-        {summariesGathered.Select(s => $"<SUMMARY>{s}</SUMMARY>").Aggregate((a, b) => $"{a}\n{b}")}
+        {summariesText}
         </SUMMARIES>
         """;
     }
