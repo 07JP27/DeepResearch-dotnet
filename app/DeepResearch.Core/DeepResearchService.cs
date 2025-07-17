@@ -5,11 +5,10 @@ using Microsoft.Extensions.AI;
 
 namespace DeepResearch.Core;
 
-public class DeepResearchService
+public class DeepResearchService(
+    IChatClient aiChatClient,
+    ISearchClient searchClient)
 {
-    private readonly IChatClient _aiChatClient;
-    private readonly ISearchClient _searchClient;
-
     private static readonly ChatOptions _reflectionOnSummaryOptions = new()
     {
        ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(ReflectionOnSummaryResponse))),
@@ -19,14 +18,6 @@ public class DeepResearchService
     {
         ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(GenerateQueryResponse))),
     };
-
-    public DeepResearchService(
-        IChatClient aiChatClient,
-        ISearchClient searchClient)
-    {
-        _aiChatClient = aiChatClient;
-        _searchClient = searchClient;
-    }
 
     public async Task<ResearchResult> RunResearchAsync(string topic, DeepResearchOptions? researchOptions = null, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -90,7 +81,7 @@ public class DeepResearchService
             state.QueryGenerationMessages.Add(new(ChatRole.User, "Generate a query for web search:"));
         }
 
-        var result = await _aiChatClient.GetResponseAsync<GenerateQueryResponse>(state.QueryGenerationMessages, _generateQueryOptions);
+        var result = await aiChatClient.GetResponseAsync<GenerateQueryResponse>(state.QueryGenerationMessages, _generateQueryOptions);
         if (result.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
 
         var generateQueryResponse = result.Result;
@@ -109,7 +100,7 @@ public class DeepResearchService
 
     private async Task WebResearchAsync(ResearchState state, DeepResearchOptions researchOptions, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
-        var searchResult = await _searchClient.SearchAsync(
+        var searchResult = await searchClient.SearchAsync(
             query: state.SearchQuery,
             maxResults: researchOptions.MaxSourceCountPerSearch,
             cancellationToken: cancellationToken);
@@ -145,18 +136,21 @@ public class DeepResearchService
         // Reset retry count on successful search or when max retries exceeded
         state.QueryRetryCount = 0;
 
-        state.Images.AddRange(searchResult.Images ?? new List<string>());
+        if (searchResult.Images is { Count: > 0 })
+        {
+            state.Images.AddRange(searchResult.Images);
+        }
 
         // Add deduplicated and cleaned sources to SourcesGathered
-        var newSources = Formatting.DeduplicateAndCleanSources(searchResult.Results ?? new List<SearchResultItem>(), state.SourcesGathered);
+        var newSources = Formatting.DeduplicateAndCleanSources(searchResult.Results ?? [], state.SourcesGathered);
         state.SourcesGathered.AddRange(newSources);
 
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, researchOptions.MaxCharacterPerSource));
 
         progress?.Report(new WebResearchProgress
         {
-            Sources = searchResult.Results ?? new List<SearchResultItem>(),
-            Images = searchResult.Images ?? new List<string>()
+            Sources = searchResult.Results ?? [],
+            Images = searchResult.Images ?? [],
         });
     }
 
@@ -172,12 +166,11 @@ public class DeepResearchService
         {
             humanMessage = $"<Context>\n{mostRecent}\n</Context>Create a Summary using the Context on this topic:\n<User Input>\n{state.ResearchTopic}\n</User Input>\n\n";
         }
-        var messages = new List<ChatMessage>
-        {
+
+        var result = await aiChatClient.GetResponseAsync([
             new (ChatRole.System, Prompts.SummarizerInstructions),
-            new (ChatRole.User, humanMessage)
-        };
-        var result = await _aiChatClient.GetResponseAsync(messages);
+            new (ChatRole.User, humanMessage),
+        ]);
         state.RunningSummary = result.Text.Trim();
         state.SummariesGathered.Add(state.RunningSummary);
 
@@ -205,7 +198,7 @@ public class DeepResearchService
             state.ReflectionMessages.Add(new (ChatRole.User, baseMessage));
         }
 
-        var result = await _aiChatClient.GetResponseAsync<ReflectionOnSummaryResponse>(state.ReflectionMessages, _reflectionOnSummaryOptions);
+        var result = await aiChatClient.GetResponseAsync<ReflectionOnSummaryResponse>(state.ReflectionMessages, _reflectionOnSummaryOptions);
         if (result.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
 
         var reflectionResponse = result.Result;
@@ -230,13 +223,12 @@ public class DeepResearchService
         if (researchOptions.EnableSummaryConsolidation)
         {
             var prompt = Prompts.FinalizeInstructions(state.SummariesGathered);
-            var messages = new List<ChatMessage>
-            {
+            List<ChatMessage> messages = [
                 new (ChatRole.System, prompt),
                 new (ChatRole.User, $"<TOPIC>{state.ResearchTopic} </TOPIC>")
-            };
+            ];
 
-            var result = await _aiChatClient.GetResponseAsync(messages);
+            var result = await aiChatClient.GetResponseAsync(messages);
             state.RunningSummary = result.Text.Trim();
         }
     }
