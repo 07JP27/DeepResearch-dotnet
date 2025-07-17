@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DeepResearch.Core\DeepResearch.Core.csproj" />
+  </ItemGroup>
+
 </Project>

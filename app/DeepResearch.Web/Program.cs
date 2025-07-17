@@ -1,6 +1,6 @@
 using DeepResearch.Web.Components;
 using DeepResearch.Web.Services;
-using DeepResearch.SearchClient;
+using DeepResearch.Core;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;

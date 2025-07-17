@@ -1,4 +1,3 @@
-using DeepResearch.SearchClient;
 using DeepResearch.Core.Models;
 using DeepResearch.Core.JsonSchema;
 using OpenAI.Chat;

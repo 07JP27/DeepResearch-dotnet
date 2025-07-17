@@ -1,4 +1,3 @@
-using DeepResearch.SearchClient;
 using OpenAI.Chat;
 
 namespace DeepResearch.Core;

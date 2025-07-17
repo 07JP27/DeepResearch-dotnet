@@ -1,3 +1,5 @@
+using DeepResearch.Core;
+
 namespace DeepResearch.SearchClient.Tavily;
 
 /// <summary>

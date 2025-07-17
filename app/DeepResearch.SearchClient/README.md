@@ -2,13 +2,13 @@
 
 # DeepResearch.SearchClient
 
-This library provides a unified search client interface (`ISearchClient`) and its implementations for various web search services. Currently, it includes the Tavily API client implementation.
+This library provides implementations of the search client interface (`ISearchClient`) defined in DeepResearch.Core for various web search services. Currently, it includes the Tavily API client implementation.
 
 ## Features
 
 This search client library provides the following features:
 
-- **Unified Interface**: `ISearchClient` enables consistent search operations across multiple providers
+- **Unified Interface**: `ISearchClient` (defined in DeepResearch.Core) enables consistent search operations across multiple providers
 - **Tavily Implementation**: Tavily API client with advanced search capabilities
 - **Highly Extensible Design**: Easy to add new search service implementations
 
@@ -25,7 +25,7 @@ This library requires the following NuGet package:
 The recommended way to use the search functionality is through the `ISearchClient` interface:
 
 ```csharp
-using DeepResearch.SearchClient;
+using DeepResearch.Core;
 using DeepResearch.SearchClient.Tavily;
 
 // Create a Tavily-based search client
