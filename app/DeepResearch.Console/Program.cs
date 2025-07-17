@@ -4,6 +4,7 @@ using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using System.Linq;
+using Microsoft.Extensions.AI;
 
 // dotnet runで実行する場合は以下の環境変数を設定してください
 // export TAVILY_API_KEY="your-tavily-api-key-here"
@@ -36,7 +37,8 @@ var searchClient = new TavilySearchClient(
 var ChatClient = new AzureOpenAIClient(
     new Uri(Environment.GetEnvironmentVariable("AOAI_BASE_URL") ?? throw new Exception("AOAI_BASE_URL is not set.")),
     new DefaultAzureCredential()
-).GetChatClient("o4-mini");
+).GetChatClient("o4-mini")
+.AsIChatClient();
 
 // 進捗状況を表示するイベントハンドラー
 void OnProgressChanged(ProgressBase progress)

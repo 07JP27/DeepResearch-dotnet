@@ -1,14 +1,14 @@
 using DeepResearch.Core;
 using DeepResearch.Core.Models;
 using DeepResearch.Core.SearchClient;
+using Microsoft.Extensions.AI;
 using OpenAI.Chat;
-using System.Text.Json;
 
 namespace DeepResearch.Web.Services;
 
 public class WebResearchService
 {
-    private readonly ChatClient? _chatClient;
+    private readonly IChatClient? _chatClient;
     private readonly ISearchClient? _searchClient;
     private readonly ILogger<WebResearchService> _logger;
     public event Action? OnProgressUpdated;
@@ -17,7 +17,7 @@ public class WebResearchService
 
     public WebResearchService(
         ILogger<WebResearchService> logger,
-        ChatClient? chatClient = null,
+        IChatClient? chatClient = null,
         ISearchClient? searchClient = null)
     {
         _logger = logger;

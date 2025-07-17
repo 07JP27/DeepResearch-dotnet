@@ -5,6 +5,7 @@ using Azure.AI.OpenAI;
 using Azure.Identity;
 using OpenAI.Chat;
 using DeepResearch.Core.SearchClient;
+using Microsoft.Extensions.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +30,7 @@ if (string.IsNullOrEmpty(openAIEndpoint) || string.IsNullOrEmpty(deploymentName)
 
 var openAIClient = new AzureOpenAIClient(new Uri(openAIEndpoint), new DefaultAzureCredential());
 var chatClient = openAIClient.GetChatClient(deploymentName);
-builder.Services.AddSingleton(chatClient);
+builder.Services.AddSingleton(chatClient.AsIChatClient());
 
 // Configure Tavily Search Client
 var tavilyApiKey = builder.Configuration["Tavily:ApiKey"];
