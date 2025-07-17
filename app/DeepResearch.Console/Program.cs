@@ -33,7 +33,7 @@ var searchClient = new TavilySearchClient(
     )
 );
 
-var ChatClient = new AzureOpenAIClient(
+var chatClient = new AzureOpenAIClient(
     new Uri(Environment.GetEnvironmentVariable("AOAI_BASE_URL") ?? throw new Exception("AOAI_BASE_URL is not set.")),
     new DefaultAzureCredential()
 ).GetChatClient("o4-mini")
@@ -103,7 +103,7 @@ var options = new DeepResearchOptions
     MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
 };
 
-var service = new DeepResearchService(ChatClient, searchClient);
+var service = new DeepResearchService(chatClient, searchClient);
 
 // 進捗状況を追跡するプログレスオブジェクトを作成
 var progress = new Progress<ProgressBase>(OnProgressChanged);
