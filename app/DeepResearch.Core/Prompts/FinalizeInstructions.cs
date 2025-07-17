@@ -15,7 +15,7 @@ internal static partial class Prompts
         - Generate your final report in the same language used in the <TOPIC>.
 
         <SUMMARIES>
-        {summariesGathered.Select(s => $"<SUMMARY>{s}</SUMMARY>").Aggregate((a, b) => $"{a}\n{b}")}
+        {string.Join('\n', summariesGathered.Select(s => $"<SUMMARY>{s}</SUMMARY>"))}
         </SUMMARIES>
         """;
     }
