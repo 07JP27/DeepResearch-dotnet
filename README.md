@@ -31,7 +31,7 @@ DeepResearch-dotnet/
 
 1. **Azure OpenAI Service**
 
-   - Assumes o4-mini model
+   - Assumes gpt-4o-mini model
    - Please note down your endpoint URL and deployment name
 
 2. **Tavily Search API**
@@ -52,6 +52,41 @@ DeepResearch-dotnet/
      }
    }
    ```
+
+## Deployment
+
+### Azure Deployment using Azure Developer CLI (azd)
+
+The easiest way to deploy this application to Azure is using the Azure Developer CLI (azd):
+
+1. **Prerequisites**
+   - Install [Azure Developer CLI (azd)](https://aka.ms/azure-dev/install)
+   - Install [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli)
+   - Get a [Tavily API key](https://tavily.com/)
+
+2. **Deploy to Azure**
+   ```bash
+   # Clone the repository
+   git clone https://github.com/07JP27/DeepResearch-dotnet.git
+   cd DeepResearch-dotnet
+
+   # Login to Azure
+   azd auth login
+
+   # Set the Tavily API key
+   azd env set TAVILY_API_KEY "your-tavily-api-key-here"
+
+   # Deploy infrastructure and application
+   azd up
+   ```
+
+3. **What gets deployed**
+   - Azure App Service to host the web application
+   - Azure OpenAI service with gpt-4o-mini model
+   - Managed Identity for secure authentication
+   - All necessary Azure resources in a new resource group
+
+The `azd up` command will create all Azure resources and deploy the application. The infrastructure is defined in the `infra/` directory using Bicep templates.
 
 ## Usage
 
