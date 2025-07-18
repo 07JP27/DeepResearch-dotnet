@@ -11,7 +11,7 @@ public class DeepResearchService(
 {
     private static readonly ChatOptions _reflectionOnSummaryOptions = new()
     {
-       ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(ReflectionOnSummaryResponse))),
+        ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(ReflectionOnSummaryResponse))),
     };
 
     private static readonly ChatOptions _generateQueryOptions = new()
@@ -82,9 +82,16 @@ public class DeepResearchService(
         }
 
         var result = await aiChatClient.GetResponseAsync<GenerateQueryResponse>(state.QueryGenerationMessages, _generateQueryOptions);
-        if (result.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
+        if (result.FinishReason != ChatFinishReason.Stop)
+        {
+            throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
+        }
 
-        var generateQueryResponse = result.Result;
+        if (!result.TryGetResult(out var generateQueryResponse))
+        {
+            // JSONパースに失敗した場合のフォールバック処理
+            throw new InvalidOperationException($"Failed to parse AI response to GenerateQueryResponse. Raw response: {result.Text}");
+        }
         // Add assistant response to conversation history
         state.QueryGenerationMessages.AddRange(result.Messages);
 
@@ -188,20 +195,27 @@ public class DeepResearchService(
         if (isRetry && state.ReflectionMessages.Count > 0)
         {
             // Add retry message to existing conversation
-            state.ReflectionMessages.Add(new (ChatRole.User, "The previous query returned no results. Please generate a different search query."));
+            state.ReflectionMessages.Add(new(ChatRole.User, "The previous query returned no results. Please generate a different search query."));
         }
         else
         {
             // Start new conversation
             state.ReflectionMessages.Clear();
-            state.ReflectionMessages.Add(new (ChatRole.System, prompt));
-            state.ReflectionMessages.Add(new (ChatRole.User, baseMessage));
+            state.ReflectionMessages.Add(new(ChatRole.System, prompt));
+            state.ReflectionMessages.Add(new(ChatRole.User, baseMessage));
         }
 
         var result = await aiChatClient.GetResponseAsync<ReflectionOnSummaryResponse>(state.ReflectionMessages, _reflectionOnSummaryOptions);
-        if (result.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
+        if (result.FinishReason != ChatFinishReason.Stop)
+        {
+            throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
+        }
 
-        var reflectionResponse = result.Result;
+        if (!result.TryGetResult(out var reflectionResponse))
+        {
+            // JSONパースに失敗した場合のフォールバック処理
+            throw new InvalidOperationException($"Failed to parse AI response to ReflectionOnSummaryResponse. Raw response: {result.Text}");
+        }
 
         // Add assistant response to conversation history
         state.ReflectionMessages.AddRange(result.Messages);
