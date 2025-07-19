@@ -3,7 +3,8 @@ using FluentAssertions;
 using DeepResearch.Core;
 using DeepResearch.Core.Models;
 using Moq;
-using OpenAI.Chat;
+using DeepResearch.Core.SearchClient;
+using Microsoft.Extensions.AI;
 
 namespace DeepResearch.Tests;
 
@@ -12,13 +13,13 @@ namespace DeepResearch.Tests;
 /// </summary>
 public class DeepResearchServiceTests
 {
-    private readonly Mock<ChatClient> _mockChatClient;
+    private readonly Mock<IChatClient> _mockChatClient;
     private readonly Mock<ISearchClient> _mockSearchClient;
     private readonly DeepResearchOptions _defaultOptions;
 
     public DeepResearchServiceTests()
     {
-        _mockChatClient = new Mock<ChatClient>();
+        _mockChatClient = new Mock<IChatClient>();
         _mockSearchClient = new Mock<ISearchClient>();
         _defaultOptions = new DeepResearchOptions();
     }
@@ -27,17 +28,7 @@ public class DeepResearchServiceTests
     public void Constructor_WithAllParameters_ShouldInitializeService()
     {
         // Act
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _defaultOptions);
-
-        // Assert
-        service.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Constructor_WithNullOptions_ShouldUseDefaultOptions()
-    {
-        // Act
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, null);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
 
         // Assert
         service.Should().NotBeNull();
@@ -48,7 +39,7 @@ public class DeepResearchServiceTests
     {
         // The constructor doesn't validate parameters, so it will create an instance
         // Act & Assert
-        var act = () => new DeepResearchService(null!, _mockSearchClient.Object, _defaultOptions);
+        var act = () => new DeepResearchService(null!, _mockSearchClient.Object);
         act.Should().NotThrow();
     }
 
@@ -57,7 +48,7 @@ public class DeepResearchServiceTests
     {
         // The constructor doesn't validate parameters, so it will create an instance
         // Act & Assert
-        var act = () => new DeepResearchService(_mockChatClient.Object, null!, _defaultOptions);
+        var act = () => new DeepResearchService(_mockChatClient.Object, null!);
         act.Should().NotThrow();
     }
 
@@ -66,13 +57,9 @@ public class DeepResearchServiceTests
     {
         // Arrange & Act
         var service1 = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
-        var service2 = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _defaultOptions);
-        var service3 = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, null);
 
         // Assert
         service1.Should().NotBeNull();
-        service2.Should().NotBeNull();
-        service3.Should().NotBeNull();
     }
 
     [Fact]
@@ -90,35 +77,15 @@ public class DeepResearchServiceTests
     }
 
     [Fact]
-    public void DeepResearchOptions_Integration_ShouldWorkWithService()
-    {
-        // Arrange
-        var customOptions = new DeepResearchOptions
-        {
-            MaxResearchLoops = 5,
-            MaxCharacterPerSource = 2000,
-            MaxSourceCountPerSearch = 10,
-            EnableSummaryConsolidation = true,
-            MaxSearchRetryAttempts = 2
-        };
-
-        // Act
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, customOptions);
-
-        // Assert
-        service.Should().NotBeNull();
-    }
-
-    [Fact]
     public async Task RunResearchAsync_WithInvalidChatClient_ShouldThrowException()
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, options);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
 
         // Act & Assert
         // Since we haven't set up the mock chat client properly, this should throw
-        var act = async () => await service.RunResearchAsync("test topic");
+        var act = async () => await service.RunResearchAsync("test topic", researchOptions: options);
         await act.Should().ThrowAsync<Exception>();
     }
 
@@ -131,11 +98,11 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, options);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
 
         // Act & Assert
         // Should attempt to process the topic (will fail at chat client level, but that's expected)
-        var act = async () => await service.RunResearchAsync(topic);
+        var act = async () => await service.RunResearchAsync(topic, researchOptions: options);
         await act.Should().ThrowAsync<Exception>();
     }
 
@@ -144,13 +111,13 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, options);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
         var progressReports = new List<ProgressBase>();
         var progress = new Progress<ProgressBase>(progressReports.Add);
 
         // Act & Assert
         // Should accept progress parameter and attempt processing
-        var act = async () => await service.RunResearchAsync("test topic", progress);
+        var act = async () => await service.RunResearchAsync("test topic", options, progress);
         await act.Should().ThrowAsync<Exception>();
     }
 
@@ -159,12 +126,12 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, options);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
         var cancellationToken = new CancellationToken();
 
         // Act & Assert
         // Should accept cancellation token and attempt processing
-        var act = async () => await service.RunResearchAsync("test topic", null, cancellationToken);
+        var act = async () => await service.RunResearchAsync("test topic", options, null, cancellationToken);
         await act.Should().ThrowAsync<Exception>();
     }
 
@@ -173,14 +140,14 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, options);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
         var progressReports = new List<ProgressBase>();
         var progress = new Progress<ProgressBase>(progressReports.Add);
         var cancellationToken = new CancellationToken();
 
         // Act & Assert
         // Should accept all parameters and attempt processing
-        var act = async () => await service.RunResearchAsync("test topic", progress, cancellationToken);
+        var act = async () => await service.RunResearchAsync("test topic", options, progress, cancellationToken);
         await act.Should().ThrowAsync<Exception>();
     }
 }

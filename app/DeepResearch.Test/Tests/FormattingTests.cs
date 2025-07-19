@@ -1,6 +1,6 @@
-using Xunit;
 using FluentAssertions;
 using DeepResearch.Core;
+using DeepResearch.Core.SearchClient;
 
 namespace DeepResearch.Tests;
 
@@ -15,7 +15,7 @@ public class FormattingTests
     public void DeduplicateAndFormatSources_WithNullSearchResult_ShouldReturnEmpty()
     {
         // Act
-        var result = Formatting.DeduplicateAndFormatSources(null, 1000);
+        var result = Formatting.DeduplicateAndFormatSources(null!, 1000);
 
         // Assert
         result.Should().BeEmpty();
@@ -25,7 +25,7 @@ public class FormattingTests
     public void DeduplicateAndFormatSources_WithNullResults_ShouldReturnEmpty()
     {
         // Arrange
-        var searchResult = new SearchResult { Results = null };
+        var searchResult = new SearchResult { Results = null! };
 
         // Act
         var result = Formatting.DeduplicateAndFormatSources(searchResult, 1000);
@@ -174,10 +174,10 @@ public class FormattingTests
             {
                 new()
                 {
-                    Title = null,
+                    Title = null!,
                     Url = "https://example.com", // Must have valid URL to not be filtered out
-                    Content = null,
-                    RawContent = null
+                    Content = null!,
+                    RawContent = null!
                 }
             }
         };
@@ -198,7 +198,7 @@ public class FormattingTests
     public void FormatSources_WithNullSearchResult_ShouldReturnEmpty()
     {
         // Act
-        var result = Formatting.FormatSources(null);
+        var result = Formatting.FormatSources(null!);
 
         // Assert
         result.Should().BeEmpty();
@@ -208,7 +208,7 @@ public class FormattingTests
     public void FormatSources_WithNullResults_ShouldReturnEmpty()
     {
         // Arrange
-        var searchResult = new SearchResult { Results = null };
+        var searchResult = new SearchResult { Results = null! };
 
         // Act
         var result = Formatting.FormatSources(searchResult);
@@ -286,7 +286,7 @@ public class FormattingTests
         {
             Results = new List<SearchResultItem>
             {
-                new() { Title = null, Url = null },
+                new() { Title = null!, Url = null! },
                 new() { Title = "", Url = "" }
             }
         };
@@ -372,7 +372,7 @@ public class FormattingTests
         {
             new() { Title = "Valid Title", Url = "https://valid.com", Content = "Valid content" },
             new() { Title = "Empty URL", Url = "", Content = "Empty URL content" },
-            new() { Title = "Null URL", Url = null, Content = "Null URL content" }
+            new() { Title = "Null URL", Url = null!, Content = "Null URL content" }
         };
         var existingSources = new List<SearchResultItem>();
 

@@ -1,10 +1,6 @@
 namespace DeepResearch.Core.Models;
 
-public class SummarizeProgress : ProgressBase
+public class SummarizeProgress() : ProgressBase(ProgressTypes.Summarize)
 {
-    public SummarizeProgress() : base(ProgressTypes.Summarize)
-    {
-    }
-
     public string Summary { get; set; } = string.Empty;
 }

@@ -1,4 +1,4 @@
-namespace DeepResearch.Core;
+namespace DeepResearch.Core.SearchClient;
 
 public interface ISearchClient
 {

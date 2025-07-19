@@ -25,7 +25,7 @@ This library requires the following NuGet package:
 The recommended way to use the search functionality is through the `ISearchClient` interface:
 
 ```csharp
-using DeepResearch.Core;
+using DeepResearch.Core.SearchClient;
 using DeepResearch.SearchClient.Tavily;
 
 // Create a Tavily-based search client

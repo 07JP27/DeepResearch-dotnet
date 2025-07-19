@@ -1,13 +1,8 @@
 namespace DeepResearch.Core.Models;
 
-public abstract class ProgressBase
+public abstract class ProgressBase(string type)
 {
-    protected ProgressBase(string type)
-    {
-        Type = type;
-    }
-
-    public string Type { get; }
+    public string Type => type;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     public string Step => Type;

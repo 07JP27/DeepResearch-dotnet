@@ -1,4 +1,4 @@
-using DeepResearch.Core;
+using DeepResearch.Core.SearchClient;
 
 namespace DeepResearch.SearchClient.Tavily;
 

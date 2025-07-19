@@ -1,11 +1,7 @@
 namespace DeepResearch.Core.Models;
 
-public class RoutingProgress : ProgressBase
+public class RoutingProgress() : ProgressBase(ProgressTypes.Routing)
 {
-    public RoutingProgress() : base(ProgressTypes.Routing)
-    {
-    }
-
     public RoutingDecision Decision { get; set; } = RoutingDecision.Continue;
     public int LoopCount { get; set; }
 }

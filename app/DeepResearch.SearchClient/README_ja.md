@@ -26,7 +26,7 @@
 推奨される利用方法は、`ISearchClient`インターフェースを通じた検索機能の利用です：
 
 ```csharp
-using DeepResearch.Core;
+using DeepResearch.Core.SearchClient;
 using DeepResearch.SearchClient.Tavily;
 
 // Tavilyベースの検索クライアントを作成
