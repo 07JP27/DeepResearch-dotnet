@@ -4,6 +4,11 @@ internal static partial class Prompts
 {
     internal static string FinalizeInstructions(List<string> summariesGathered)
     {
+        if (summariesGathered == null || summariesGathered.Count == 0)
+        {
+            throw new InvalidOperationException("Cannot generate finalize instructions with an empty list of summaries.");
+        }
+
         return
         $"""
         - Your task is to synthesize the piecemeal researched summaries to create a coherent final report.
