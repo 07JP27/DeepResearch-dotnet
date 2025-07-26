@@ -1,3 +1,5 @@
+using DeepResearch.Core.SearchClient;
+
 namespace DeepResearch.Core;
 
 /// <summary>
@@ -18,10 +20,10 @@ public class ResearchResult
     /// <summary>
     /// The structured source information used in the research.
     /// </summary>
-    public List<SearchResultItem> Sources { get; set; } = new();
+    public List<SearchResultItem> Sources { get; set; } = [];
 
     /// <summary>
     /// Images found during the research process.
     /// </summary>
-    public List<string> Images { get; set; } = new();
+    public List<string> Images { get; set; } = [];
 }

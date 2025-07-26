@@ -1,9 +1,9 @@
-namespace DeepResearch.Core;
+namespace DeepResearch.Core.SearchClient;
 
 public class SearchResult
 {
-    public List<SearchResultItem> Results { get; set; } = new();
-    public List<string> Images { get; set; } = new();
+    public List<SearchResultItem> Results { get; set; } = [];
+    public List<string> Images { get; set; } = [];
 }
 
 public class SearchResultItem

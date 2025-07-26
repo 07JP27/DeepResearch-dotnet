@@ -4,6 +4,11 @@ internal static partial class Prompts
 {
     internal static string FinalizeInstructions(List<string> summariesGathered)
     {
+        if (summariesGathered == null || summariesGathered.Count == 0)
+        {
+            throw new InvalidOperationException("Cannot generate finalize instructions with an empty list of summaries.");
+        }
+
         return
         $"""
         - Your task is to synthesize the piecemeal researched summaries to create a coherent final report.
@@ -15,7 +20,7 @@ internal static partial class Prompts
         - Generate your final report in the same language used in the <TOPIC>.
 
         <SUMMARIES>
-        {summariesGathered.Select(s => $"<SUMMARY>{s}</SUMMARY>").Aggregate((a, b) => $"{a}\n{b}")}
+        {string.Join('\n', summariesGathered.Select(s => $"<SUMMARY>{s}</SUMMARY>"))}
         </SUMMARIES>
         """;
     }

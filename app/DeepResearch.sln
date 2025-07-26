@@ -18,9 +18,6 @@ Global
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{B267895B-6809-45AB-87C2-1F4EB58762CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B267895B-6809-45AB-87C2-1F4EB58762CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
