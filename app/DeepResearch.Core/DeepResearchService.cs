@@ -1,77 +1,75 @@
 using DeepResearch.Core.Models;
 using DeepResearch.Core.JsonSchema;
-using OpenAI.Chat;
-using System.Text.Json;
+using DeepResearch.Core.SearchClient;
+using Microsoft.Extensions.AI;
 
 namespace DeepResearch.Core;
 
-public class DeepResearchService
+public class DeepResearchService(
+    IChatClient aiChatClient,
+    ISearchClient searchClient,
+    TimeProvider timeProvider)
 {
-    private readonly ChatClient _aiChatClient;
-    private readonly ISearchClient _searchClient;
-    private readonly DeepResearchOptions _researchOptions;
-
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    private static readonly ChatOptions _reflectionOnSummaryOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(ReflectionOnSummaryResponse))),
     };
 
-    private static readonly ChatCompletionOptions _reflectionOnSummaryOptions = new()
+    private static readonly ChatOptions _generateQueryOptions = new()
     {
-        ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("ReflectionResponse", JsonSchemaGenerator.GenerateSchemaAsBinaryData(SourceGenerationContext.Default.ReflectionOnSummaryResponse)),
+        ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(GenerateQueryResponse))),
     };
 
-    private static readonly ChatCompletionOptions _generateQueryOptions = new()
+    // Progress作成ヘルパーメソッド
+    private T CreateProgress<T>() where T : ProgressBase, new()
     {
-        ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("AnalysisAgentResponse", JsonSchemaGenerator.GenerateSchemaAsBinaryData(SourceGenerationContext.Default.GenerateQueryResponse)),
-    };
-
-    public DeepResearchService(
-        ChatClient aiChatClient,
-        ISearchClient searchClient,
-        DeepResearchOptions? options = null)
-    {
-        _aiChatClient = aiChatClient;
-        _searchClient = searchClient;
-
-        options ??= new DeepResearchOptions();
-        _researchOptions = options;
+        var progress = new T();
+        progress.Timestamp = timeProvider.GetUtcNow().DateTime;
+        return progress;
     }
 
-    public async Task<ResearchResult> RunResearchAsync(string topic, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
+    private T CreateProgress<T>(Action<T> configure) where T : ProgressBase, new()
     {
+        var progress = CreateProgress<T>();
+        configure(progress);
+        return progress;
+    }
+
+    public async Task<ResearchResult> RunResearchAsync(string topic, DeepResearchOptions? researchOptions = null, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
+    {
+        researchOptions ??= new();
         var state = new ResearchState { ResearchTopic = topic };
 
         await GenerateQueryAsync(state, progress, cancellationToken);
 
-        while (state.ResearchLoopCount < _researchOptions.MaxResearchLoops)
+        while (state.ResearchLoopCount < researchOptions.MaxResearchLoops)
         {
-            NotifyProgress(progress, new RoutingProgress
+            progress?.Report(CreateProgress<RoutingProgress>(p =>
             {
-                Decision = RoutingDecision.Continue,
-                LoopCount = state.ResearchLoopCount
-            });
+                p.Decision = RoutingDecision.Continue;
+                p.LoopCount = state.ResearchLoopCount;
+            }));
 
-            await WebResearchAsync(state, progress, cancellationToken);
+            await WebResearchAsync(state, researchOptions, progress, cancellationToken);
             await SummarizeSourcesAsync(state, progress, cancellationToken);
             await ReflectOnSummaryAsync(state, progress, cancellationToken);
             state.ResearchLoopCount++;
         }
 
-        NotifyProgress(progress, new RoutingProgress
+        progress?.Report(CreateProgress<RoutingProgress>(p =>
         {
-            Decision = RoutingDecision.Finalize,
-            LoopCount = state.ResearchLoopCount
-        });
+            p.Decision = RoutingDecision.Finalize;
+            p.LoopCount = state.ResearchLoopCount;
+        }));
 
-        await FinalizeSummaryAsync(state, progress, cancellationToken);
+        await FinalizeSummaryAsync(state, researchOptions, progress, cancellationToken);
 
-        NotifyProgress(progress, new ResearchCompleteProgress
+        progress?.Report(CreateProgress<ResearchCompleteProgress>(p =>
         {
-            FinalSummary = state.RunningSummary,
-            Sources = state.SourcesGathered,
-            Images = state.Images
-        });
+            p.FinalSummary = state.RunningSummary;
+            p.Sources = state.SourcesGathered;
+            p.Images = state.Images;
+        }));
 
         return new ResearchResult
         {
@@ -82,58 +80,63 @@ public class DeepResearchService
         };
     }
 
-    private async Task GenerateQueryAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default, bool isRetry = false)
+    private async Task GenerateQueryAsync(ResearchState state, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default, bool isRetry = false)
     {
         var prompt = string.Format(Prompts.QueryWriterInstructions, DateTime.Now.ToString("MMMM dd, yyyy"), state.ResearchTopic);
 
         if (isRetry && state.QueryGenerationMessages.Count > 0)
         {
             // Add retry message to existing conversation
-            state.QueryGenerationMessages.Add(new UserChatMessage("The previous query returned no results. Please generate a different search query."));
+            state.QueryGenerationMessages.Add(new(ChatRole.User, "The previous query returned no results. Please generate a different search query."));
         }
         else
         {
             // Start new conversation
             state.QueryGenerationMessages.Clear();
-            state.QueryGenerationMessages.Add(new SystemChatMessage(prompt));
-            state.QueryGenerationMessages.Add(new UserChatMessage("Generate a query for web search:"));
+            state.QueryGenerationMessages.Add(new(ChatRole.System, prompt));
+            state.QueryGenerationMessages.Add(new(ChatRole.User, "Generate a query for web search:"));
         }
 
-        var result = await _aiChatClient.CompleteChatAsync(state.QueryGenerationMessages, _generateQueryOptions);
-        if (result.Value.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.Value.FinishReason}");
+        var result = await aiChatClient.GetResponseAsync<GenerateQueryResponse>(state.QueryGenerationMessages, _generateQueryOptions);
+        if (result.FinishReason != ChatFinishReason.Stop)
+        {
+            throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
+        }
 
-        var generateQueryResponse = JsonSerializer.Deserialize<GenerateQueryResponse>(result.Value.Content.First().Text, _jsonSerializerOptions);
-        if (generateQueryResponse == null) throw new InvalidOperationException("Failed to deserialize GenerateQueryResponse");
-
+        if (!result.TryGetResult(out var generateQueryResponse))
+        {
+            // JSONパースに失敗した場合のフォールバック処理
+            throw new InvalidOperationException($"Failed to parse AI response to GenerateQueryResponse. Raw response: {result.Text}");
+        }
         // Add assistant response to conversation history
-        state.QueryGenerationMessages.Add(new AssistantChatMessage(result.Value.Content.First().Text));
+        state.QueryGenerationMessages.AddRange(result.Messages);
 
         state.SearchQuery = generateQueryResponse.Query;
         state.QueryRationale = generateQueryResponse.Rationale;
 
-        NotifyProgress(progress, new QueryGenerationProgress
+        progress?.Report(CreateProgress<QueryGenerationProgress>(p =>
         {
-            Query = state.SearchQuery,
-            Rationale = state.QueryRationale
-        });
+            p.Query = state.SearchQuery;
+            p.Rationale = state.QueryRationale;
+        }));
     }
 
-    private async Task WebResearchAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
+    private async Task WebResearchAsync(ResearchState state, DeepResearchOptions researchOptions, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
-        var searchResult = await _searchClient.SearchAsync(
+        var searchResult = await searchClient.SearchAsync(
             query: state.SearchQuery,
-            maxResults: _researchOptions.MaxSourceCountPerSearch,
+            maxResults: researchOptions.MaxSourceCountPerSearch,
             cancellationToken: cancellationToken);
 
         // Check if no results and retry limit not exceeded
         if ((searchResult.Results == null || searchResult.Results.Count == 0) &&
-            state.QueryRetryCount < _researchOptions.MaxSearchRetryAttempts)
+            state.QueryRetryCount < researchOptions.MaxSearchRetryAttempts)
         {
-            NotifyProgress(progress, new RoutingProgress
+            progress?.Report(CreateProgress<RoutingProgress>(p =>
             {
-                Decision = RoutingDecision.RetrySearch,
-                LoopCount = state.QueryRetryCount
-            });
+                p.Decision = RoutingDecision.RetrySearch;
+                p.LoopCount = state.QueryRetryCount;
+            }));
 
             state.QueryRetryCount++;
 
@@ -150,29 +153,31 @@ public class DeepResearchService
             }
 
             // Recursively call WebResearchAsync with new query
-            await WebResearchAsync(state, progress, cancellationToken);
-            return;
+            await WebResearchAsync(state, researchOptions, progress, cancellationToken);
         }
 
         // Reset retry count on successful search or when max retries exceeded
         state.QueryRetryCount = 0;
 
-        state.Images.AddRange(searchResult.Images ?? new List<string>());
+        if (searchResult.Images is { Count: > 0 })
+        {
+            state.Images.AddRange(searchResult.Images);
+        }
 
         // Add deduplicated and cleaned sources to SourcesGathered
-        var newSources = Formatting.DeduplicateAndCleanSources(searchResult.Results ?? new List<SearchResultItem>(), state.SourcesGathered);
+        var newSources = Formatting.DeduplicateAndCleanSources(searchResult.Results ?? [], state.SourcesGathered);
         state.SourcesGathered.AddRange(newSources);
 
-        state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, _researchOptions.MaxCharacterPerSource));
+        state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, researchOptions.MaxCharacterPerSource));
 
-        NotifyProgress(progress, new WebResearchProgress
+        progress?.Report(CreateProgress<WebResearchProgress>(p =>
         {
-            Sources = searchResult.Results ?? new List<SearchResultItem>(),
-            Images = searchResult.Images ?? new List<string>()
-        });
+            p.Sources = searchResult.Results ?? [];
+            p.Images = searchResult.Images ?? [];
+        }));
     }
 
-    private async Task SummarizeSourcesAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
+    private async Task SummarizeSourcesAsync(ResearchState state, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
         var mostRecent = state.WebResearchResults.Count > 0 ? state.WebResearchResults[^1] : "";
         string humanMessage;
@@ -184,22 +189,21 @@ public class DeepResearchService
         {
             humanMessage = $"<Context>\n{mostRecent}\n</Context>Create a Summary using the Context on this topic:\n<User Input>\n{state.ResearchTopic}\n</User Input>\n\n";
         }
-        var messages = new List<ChatMessage>
-        {
-            new SystemChatMessage(Prompts.SummarizerInstructions),
-            new UserChatMessage(humanMessage)
-        };
-        var result = await _aiChatClient.CompleteChatAsync(messages);
-        state.RunningSummary = result.Value.Content.First().Text.Trim();
+
+        var result = await aiChatClient.GetResponseAsync([
+            new (ChatRole.System, Prompts.SummarizerInstructions),
+            new (ChatRole.User, humanMessage),
+        ]);
+        state.RunningSummary = result.Text.Trim();
         state.SummariesGathered.Add(state.RunningSummary);
 
-        NotifyProgress(progress, new SummarizeProgress
+        progress?.Report(CreateProgress<SummarizeProgress>(p =>
         {
-            Summary = state.RunningSummary
-        });
+            p.Summary = state.RunningSummary;
+        }));
     }
 
-    private async Task ReflectOnSummaryAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default, bool isRetry = false)
+    private async Task ReflectOnSummaryAsync(ResearchState state, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default, bool isRetry = false)
     {
         var prompt = string.Format(Prompts.ReflectionInstructions, state.ResearchTopic);
         var baseMessage = $"Reflect on our existing knowledge: \n===\n{state.RunningSummary},\n===\nAnd now identify a knowledge gap and generate a follow-up web search query:";
@@ -207,55 +211,55 @@ public class DeepResearchService
         if (isRetry && state.ReflectionMessages.Count > 0)
         {
             // Add retry message to existing conversation
-            state.ReflectionMessages.Add(new UserChatMessage("The previous query returned no results. Please generate a different search query."));
+            state.ReflectionMessages.Add(new(ChatRole.User, "The previous query returned no results. Please generate a different search query."));
         }
         else
         {
             // Start new conversation
             state.ReflectionMessages.Clear();
-            state.ReflectionMessages.Add(new SystemChatMessage(prompt));
-            state.ReflectionMessages.Add(new UserChatMessage(baseMessage));
+            state.ReflectionMessages.Add(new(ChatRole.System, prompt));
+            state.ReflectionMessages.Add(new(ChatRole.User, baseMessage));
         }
 
-        var result = await _aiChatClient.CompleteChatAsync(state.ReflectionMessages, _reflectionOnSummaryOptions);
-        if (result.Value.FinishReason != ChatFinishReason.Stop) throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.Value.FinishReason}");
+        var result = await aiChatClient.GetResponseAsync<ReflectionOnSummaryResponse>(state.ReflectionMessages, _reflectionOnSummaryOptions);
+        if (result.FinishReason != ChatFinishReason.Stop)
+        {
+            throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
+        }
 
-        var reflectionResponse = JsonSerializer.Deserialize<ReflectionOnSummaryResponse>(result.Value.Content.First().Text, _jsonSerializerOptions);
-        if (reflectionResponse == null) throw new InvalidOperationException("Failed to deserialize ReflectionOnSummaryResponse");
+        if (!result.TryGetResult(out var reflectionResponse))
+        {
+            // JSONパースに失敗した場合のフォールバック処理
+            throw new InvalidOperationException($"Failed to parse AI response to ReflectionOnSummaryResponse. Raw response: {result.Text}");
+        }
 
         // Add assistant response to conversation history
-        state.ReflectionMessages.Add(new AssistantChatMessage(result.Value.Content.First().Text));
+        state.ReflectionMessages.AddRange(result.Messages);
 
         state.SearchQuery = reflectionResponse.FollowUpQuery;
         state.KnowledgeGap = reflectionResponse.KnowledgeGap;
 
-        NotifyProgress(progress, new ReflectionProgress
+        progress?.Report(CreateProgress<ReflectionProgress>(p =>
         {
-            Query = state.SearchQuery,
-            KnowledgeGap = state.KnowledgeGap
-        });
+            p.Query = state.SearchQuery;
+            p.KnowledgeGap = state.KnowledgeGap;
+        }));
     }
 
-    private async Task FinalizeSummaryAsync(ResearchState state, IProgress<ProgressBase>? progress, CancellationToken cancellationToken = default)
+    private async Task FinalizeSummaryAsync(ResearchState state, DeepResearchOptions researchOptions, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
-        NotifyProgress(progress, new FinalizeProgress());
+        progress?.Report(CreateProgress<FinalizeProgress>());
 
-        if (_researchOptions.EnableSummaryConsolidation)
+        if (researchOptions.EnableSummaryConsolidation)
         {
             var prompt = Prompts.FinalizeInstructions(state.SummariesGathered);
-            var messages = new List<ChatMessage>
-            {
-                new SystemChatMessage(prompt),
-                new UserChatMessage($"<TOPIC>{state.ResearchTopic} </TOPIC>")
-            };
+            List<ChatMessage> messages = [
+                new (ChatRole.System, prompt),
+                new (ChatRole.User, $"<TOPIC>{state.ResearchTopic} </TOPIC>")
+            ];
 
-            var result = await _aiChatClient.CompleteChatAsync(messages);
-            state.RunningSummary = result.Value.Content.First().Text.Trim();
+            var result = await aiChatClient.GetResponseAsync(messages);
+            state.RunningSummary = result.Text.Trim();
         }
-    }
-
-    private static void NotifyProgress(IProgress<ProgressBase>? progress, ProgressBase progressInfo)
-    {
-        progress?.Report(progressInfo);
     }
 }

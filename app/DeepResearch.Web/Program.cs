@@ -1,10 +1,11 @@
 using DeepResearch.Web.Components;
 using DeepResearch.Web.Services;
-using DeepResearch.Core;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;
-using OpenAI.Chat;
+using DeepResearch.Core.SearchClient;
+using Microsoft.Extensions.AI;
+using DeepResearch.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,11 +13,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Add Controllers for API endpoints
-builder.Services.AddControllers();
-
 // Add HttpClient
 builder.Services.AddHttpClient();
+
+// Add TimeProvider for dependency injection
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 // Configure OpenAI
 var openAIEndpoint = builder.Configuration["OpenAI:Endpoint"];
@@ -27,9 +28,9 @@ if (string.IsNullOrEmpty(openAIEndpoint) || string.IsNullOrEmpty(deploymentName)
     throw new InvalidOperationException("OpenAI endpoint or deployment name must be configured.");
 }
 
-var openAIClient = new AzureOpenAIClient(new Uri(openAIEndpoint), new DefaultAzureCredential());
+var openAIClient = new AzureOpenAIClient(new (openAIEndpoint), new DefaultAzureCredential());
 var chatClient = openAIClient.GetChatClient(deploymentName);
-builder.Services.AddSingleton(chatClient);
+builder.Services.AddSingleton(chatClient.AsIChatClient());
 
 // Configure Tavily Search Client
 var tavilyApiKey = builder.Configuration["Tavily:ApiKey"];
@@ -44,11 +45,10 @@ builder.Services.AddScoped<ITavilyClient>(provider =>
     var httpClient = httpClientFactory.CreateClient();
     return new TavilyClient(httpClient, tavilyApiKey);
 });
-builder.Services.AddScoped<ISearchClient>(provider =>
-{
-    var tavilyClient = provider.GetRequiredService<ITavilyClient>();
-    return new DeepResearch.SearchClient.Tavily.TavilySearchClient(tavilyClient);
-});
+builder.Services.AddScoped<ISearchClient, TavilySearchClient>();
+
+// Add DeepResearch service
+builder.Services.AddScoped<DeepResearchService>();
 
 // Add research services
 builder.Services.AddScoped<WebResearchService>();

@@ -1,4 +1,3 @@
-using Xunit;
 using FluentAssertions;
 using DeepResearch.Core.Models;
 
@@ -16,6 +15,31 @@ public class ProgressModelsTests
         var progressType = typeof(ProgressBase);
         progressType.IsAbstract.Should().BeTrue(); // It is abstract in the implementation
         progressType.IsClass.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ProgressBase_Timestamp_ShouldBeSettable()
+    {
+        // Arrange
+        var progress = new ErrorProgress(); // Using concrete implementation
+        var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        // Act
+        progress.Timestamp = testTime;
+
+        // Assert
+        progress.Timestamp.Should().Be(testTime);
+    }
+
+    [Fact]
+    public void ProgressBase_Timestamp_ShouldDefaultToMinValue()
+    {
+        // Arrange & Act
+        var progress = new ErrorProgress(); // Using concrete implementation
+
+        // Assert
+        // Since we removed DateTime.UtcNow default initialization, it should be DateTime.MinValue
+        progress.Timestamp.Should().Be(DateTime.MinValue);
     }
 
     [Fact]

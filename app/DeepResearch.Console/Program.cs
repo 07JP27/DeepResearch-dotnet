@@ -3,7 +3,7 @@ using DeepResearch.Core.Models;
 using DeepResearch.SearchClient.Tavily;
 using Azure.AI.OpenAI;
 using Azure.Identity;
-using System.Linq;
+using Microsoft.Extensions.AI;
 
 // dotnet runで実行する場合は以下の環境変数を設定してください
 // export TAVILY_API_KEY="your-tavily-api-key-here"
@@ -33,10 +33,15 @@ var searchClient = new TavilySearchClient(
     )
 );
 
-var ChatClient = new AzureOpenAIClient(
+var chatClient = new AzureOpenAIClient(
     new Uri(Environment.GetEnvironmentVariable("AOAI_BASE_URL") ?? throw new Exception("AOAI_BASE_URL is not set.")),
     new DefaultAzureCredential()
-).GetChatClient("o4-mini");
+).GetChatClient("o4-mini")
+.AsIChatClient();
+
+// TimeProviderを明示的に作成して渡す
+var timeProvider = TimeProvider.System;
+var service = new DeepResearchService(chatClient, searchClient, timeProvider);
 
 // 進捗状況を表示するイベントハンドラー
 void OnProgressChanged(ProgressBase progress)
@@ -102,12 +107,10 @@ var options = new DeepResearchOptions
     MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
 };
 
-var service = new DeepResearchService(ChatClient, searchClient, options);
-
 // 進捗状況を追跡するプログレスオブジェクトを作成
 var progress = new Progress<ProgressBase>(OnProgressChanged);
 
-var result = await service.RunResearchAsync(researchTopic, progress, CancellationToken.None);
+var result = await service.RunResearchAsync(researchTopic, options, progress, CancellationToken.None);
 
 Console.WriteLine("\n" + new string('=', 50));
 Console.WriteLine("📋 調査結果");

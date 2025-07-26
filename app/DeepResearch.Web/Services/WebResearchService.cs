@@ -1,27 +1,41 @@
 using DeepResearch.Core;
 using DeepResearch.Core.Models;
-using OpenAI.Chat;
-using System.Text.Json;
 
 namespace DeepResearch.Web.Services;
 
 public class WebResearchService
 {
-    private readonly ChatClient? _chatClient;
-    private readonly ISearchClient? _searchClient;
     private readonly ILogger<WebResearchService> _logger;
+    private readonly DeepResearchService _deepResearchService;
+    private readonly TimeProvider _timeProvider;
+
     public event Action? OnProgressUpdated;
 
     public List<ProgressBase> ProgressHistory { get; private set; } = new List<ProgressBase>();
 
     public WebResearchService(
         ILogger<WebResearchService> logger,
-        ChatClient? chatClient = null,
-        ISearchClient? searchClient = null)
+        DeepResearchService deepResearchService,
+        TimeProvider timeProvider)
     {
         _logger = logger;
-        _chatClient = chatClient;
-        _searchClient = searchClient;
+        _deepResearchService = deepResearchService;
+        _timeProvider = timeProvider;
+    }
+
+    // Progress作成ヘルパーメソッド
+    private T CreateProgress<T>() where T : ProgressBase, new()
+    {
+        var progress = new T();
+        progress.Timestamp = _timeProvider.GetUtcNow().DateTime;
+        return progress;
+    }
+
+    private T CreateProgress<T>(Action<T> configure) where T : ProgressBase, new()
+    {
+        var progress = CreateProgress<T>();
+        configure(progress);
+        return progress;
     }
 
     public async Task<ResearchResult?> StartResearchAsync(string topic, CancellationToken cancellationToken = default)
@@ -29,46 +43,33 @@ public class WebResearchService
         try
         {
             // 設定チェック
-            if (_chatClient == null)
+            if (_deepResearchService == null)
             {
-                NotifyClient(new ErrorProgress { Message = "Azure OpenAI設定が不完全です。" });
-                return null;
-            }
-
-            if (_searchClient == null)
-            {
-                NotifyClient(new ErrorProgress { Message = "Tavily API設定が不完全です。" });
+                NotifyClient(CreateProgress<ErrorProgress>(p => 
+                    p.Message = "DeepResearchService が初期化されていません。"));
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                NotifyClient(new ErrorProgress { Message = "トピックは必須です。" });
+                NotifyClient(CreateProgress<ErrorProgress>(p => 
+                    p.Message = "トピックは必須です。"));
                 return null;
             }
 
-            NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
-
-            var reseachOption = new DeepResearchOptions
-            {
-                MaxSourceCountPerSearch = 2,
-            };
-
-            var researchService = new DeepResearchService(
-                _chatClient,
-                _searchClient,
-                reseachOption
-            );
+            NotifyClient(CreateProgress<ThinkingProgress>(p => 
+                p.Message = "調査を開始します..."));
 
             // 進捗状況を追跡するプログレスオブジェクトを作成
             var progress = new Progress<ProgressBase>(async progress => await OnProgressChanged(progress));
 
-            return await researchService.RunResearchAsync(topic, progress, cancellationToken);
+            return await _deepResearchService.RunResearchAsync(topic, new() { MaxSourceCountPerSearch = 2 }, progress, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            NotifyClient(new ErrorProgress { Message = $"エラーが発生しました: {ex.Message}" });
+            NotifyClient(CreateProgress<ErrorProgress>(p => 
+                p.Message = $"エラーが発生しました: {ex.Message}"));
             return null;
         }
     }
