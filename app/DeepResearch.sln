@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.Test", "DeepRe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.SearchClient", "DeepResearch.SearchClient\DeepResearch.SearchClient.csproj", "{63C9E4C7-D883-4C15-955E-DAC876A49E99}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LongRunning", "LongRunning", "{DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LongRunningDeepResearch", "LongRunning\LongRunningDeepResearch\LongRunningDeepResearch.csproj", "{CAB5E313-4065-4910-977F-6E2126D7BB41}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,5 +43,18 @@ Global
 		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{63C9E4C7-D883-4C15-955E-DAC876A49E99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CAB5E313-4065-4910-977F-6E2126D7BB41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAB5E313-4065-4910-977F-6E2126D7BB41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAB5E313-4065-4910-977F-6E2126D7BB41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAB5E313-4065-4910-977F-6E2126D7BB41}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CAB5E313-4065-4910-977F-6E2126D7BB41} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DAE619D2-6824-4961-8C60-F395AB84FBD9}
 	EndGlobalSection
 EndGlobal

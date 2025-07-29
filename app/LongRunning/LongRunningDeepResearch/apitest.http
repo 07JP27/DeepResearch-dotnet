@@ -1,0 +1,6 @@
+POST http://localhost:7226/api/DeepResearchStarter
+Content-Type: application/json
+
+{
+  "topic": "”L‚Æ‚ÌK‚¹‚È¶Šˆ"
+}
