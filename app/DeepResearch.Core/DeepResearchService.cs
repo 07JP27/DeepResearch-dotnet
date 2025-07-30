@@ -20,7 +20,6 @@ public class DeepResearchService(
         ResponseFormat = ChatResponseFormat.ForJsonSchema(AIJsonUtilities.CreateJsonSchema(typeof(GenerateQueryResponse))),
     };
 
-    // Progress作成ヘルパーメソッド
     private T CreateProgress<T>() where T : ProgressBase, new()
     {
         var progress = new T();

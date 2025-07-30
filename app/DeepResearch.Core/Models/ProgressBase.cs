@@ -16,7 +16,6 @@ public abstract class ProgressBase(string type)
 {
     public string Type => type;
     
-    // TimeProviderは各Progressクラス作成時に外部から設定される
     public DateTime Timestamp { get; set; }
 
     public string Step => Type;
