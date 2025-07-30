@@ -16,7 +16,7 @@ public abstract class ProgressBase(string type)
 {
     public string Type => type;
     
-    public DateTime Timestamp { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
 
     public string Step => Type;
 }

@@ -23,7 +23,7 @@ public class DeepResearchService(
     private T CreateProgress<T>() where T : ProgressBase, new()
     {
         var progress = new T();
-        progress.Timestamp = timeProvider.GetUtcNow().DateTime;
+        progress.Timestamp = timeProvider.GetUtcNow();
         return progress;
     }
 
