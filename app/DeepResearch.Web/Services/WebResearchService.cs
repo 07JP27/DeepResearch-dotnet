@@ -3,7 +3,7 @@ using DeepResearch.Core.Models;
 
 namespace DeepResearch.Web.Services;
 
-public class WebResearchService
+public class WebResearchService : IAsyncProgress<ProgressBase>
 {
     private readonly ILogger<WebResearchService> _logger;
     private readonly DeepResearchService _deepResearchService;
@@ -20,6 +20,18 @@ public class WebResearchService
         _deepResearchService = deepResearchService;
     }
 
+    public async ValueTask ReportAsync(ProgressBase value, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await NotifyClientAsync(value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "進行状況の通知中にエラーが発生しました");
+        }
+    }
+
     public async Task<ResearchResult?> StartResearchAsync(string topic, CancellationToken cancellationToken = default)
     {
         try
@@ -27,51 +39,42 @@ public class WebResearchService
             // 設定チェック
             if (_deepResearchService == null)
             {
-                NotifyClient(new ErrorProgress { Message = "DeepResearchService が初期化されていません。" });
+                await NotifyClientAsync(new ErrorProgress { Message = "DeepResearchService が初期化されていません。" });
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                NotifyClient(new ErrorProgress { Message = "トピックは必須です。" });
+                await NotifyClientAsync(new ErrorProgress { Message = "トピックは必須です。" });
                 return null;
             }
 
-            NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
+            await NotifyClientAsync(new ThinkingProgress { Message = "調査を開始します..." });
 
-            // 進捗状況を追跡するプログレスオブジェクトを作成
-            var progress = new Progress<ProgressBase>(async progress => await OnProgressChanged(progress));
-
-            return await _deepResearchService.RunResearchAsync(topic, new() { MaxSourceCountPerSearch = 2 }, progress, cancellationToken);
+            // Use the new async progress support
+            return await _deepResearchService.RunResearchWithAsyncProgressAsync(
+                topic, 
+                new DeepResearchOptions { MaxSourceCountPerSearch = 2 }, 
+                this, 
+                cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            NotifyClient(new ErrorProgress { Message = $"エラーが発生しました: {ex.Message}" });
+            await NotifyClientAsync(new ErrorProgress { Message = $"エラーが発生しました: {ex.Message}" });
             return null;
         }
     }
 
-    private Task OnProgressChanged(ProgressBase progress)
-    {
-        try
-        {
-            NotifyClient(progress);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "進行状況の通知中にエラーが発生しました");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private void NotifyClient(ProgressBase progress)
+    private async ValueTask NotifyClientAsync(ProgressBase progress)
     {
         try
         {
             ProgressHistory.Add(progress);
             OnProgressUpdated?.Invoke();
+            
+            // Allow for any async operations that might be needed by subscribers
+            await Task.Delay(1, CancellationToken.None);
         }
         catch (Exception ex)
         {
