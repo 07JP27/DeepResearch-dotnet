@@ -138,6 +138,7 @@ public class DeepResearchService(
 
             // Recursively call WebResearchAsync with new query
             await WebResearchAsync(state, researchOptions, progress, cancellationToken);
+            return;
         }
 
         // Reset retry count on successful search or when max retries exceeded
