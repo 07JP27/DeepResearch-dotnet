@@ -52,7 +52,7 @@ public class WebResearchService : IAsyncProgress<ProgressBase>
             await NotifyClientAsync(new ThinkingProgress { Message = "調査を開始します..." });
 
             // Use the new async progress support
-            return await _deepResearchService.RunResearchWithAsyncProgressAsync(
+            return await _deepResearchService.RunResearchAsync(
                 topic, 
                 new DeepResearchOptions { MaxSourceCountPerSearch = 2 }, 
                 this, 

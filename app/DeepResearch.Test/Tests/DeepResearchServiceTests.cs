@@ -107,7 +107,7 @@ public class DeepResearchServiceTests
     }
 
     [Fact]
-    public async Task RunResearchWithAsyncProgressAsync_WithNullTopic_ShouldThrowException()
+    public async Task RunResearchAsync_WithAsyncProgress_WithNullTopic_ShouldThrowException()
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
@@ -115,12 +115,12 @@ public class DeepResearchServiceTests
         var mockAsyncProgress = new Mock<IAsyncProgress<ProgressBase>>();
 
         // Act & Assert
-        var act = async () => await service.RunResearchWithAsyncProgressAsync(null!, options, mockAsyncProgress.Object);
+        var act = async () => await service.RunResearchAsync(null!, options, mockAsyncProgress.Object);
         await act.Should().ThrowAsync<Exception>();
     }
 
     [Fact]
-    public async Task RunResearchWithAsyncProgressAsync_WithValidParameters_ShouldAttemptToProcess()
+    public async Task RunResearchAsync_WithAsyncProgress_WithValidParameters_ShouldAttemptToProcess()
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
@@ -129,12 +129,12 @@ public class DeepResearchServiceTests
 
         // Act & Assert
         // Since we haven't set up the mock properly, this should throw
-        var act = async () => await service.RunResearchWithAsyncProgressAsync("test topic", options, mockAsyncProgress.Object);
+        var act = async () => await service.RunResearchAsync("test topic", options, mockAsyncProgress.Object);
         await act.Should().ThrowAsync<Exception>();
     }
 
     [Fact]
-    public async Task RunResearchWithAsyncProgressAsync_WithoutOptions_ShouldAttemptToProcess()
+    public async Task RunResearchAsync_WithAsyncProgress_WithoutOptions_ShouldAttemptToProcess()
     {
         // Arrange
         var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
@@ -142,7 +142,7 @@ public class DeepResearchServiceTests
 
         // Act & Assert
         // Since we haven't set up the mock properly, this should throw
-        var act = async () => await service.RunResearchWithAsyncProgressAsync("test topic", mockAsyncProgress.Object);
+        var act = async () => await service.RunResearchAsync("test topic", mockAsyncProgress.Object);
         await act.Should().ThrowAsync<Exception>();
     }
 
@@ -150,7 +150,7 @@ public class DeepResearchServiceTests
     [InlineData("Simple async topic")]
     [InlineData("Async topic with special characters: !@#$%")]
     [InlineData("非同期トピック")]
-    public async Task RunResearchWithAsyncProgressAsync_WithVariousTopics_ShouldAttemptToProcess(string topic)
+    public async Task RunResearchAsync_WithAsyncProgress_WithVariousTopics_ShouldAttemptToProcess(string topic)
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
@@ -159,7 +159,7 @@ public class DeepResearchServiceTests
 
         // Act & Assert
         // Since we haven't set up the mock properly, this should throw
-        var act = async () => await service.RunResearchWithAsyncProgressAsync(topic, options, mockAsyncProgress.Object);
+        var act = async () => await service.RunResearchAsync(topic, options, mockAsyncProgress.Object);
         await act.Should().ThrowAsync<Exception>();
     }
 
@@ -188,7 +188,7 @@ public class DeepResearchServiceTests
 
         // Act & Assert
         // Should accept cancellation token and attempt processing
-        var act = async () => await service.RunResearchAsync("test topic", options, null, cancellationToken);
+        var act = async () => await service.RunResearchAsync("test topic", options, (IProgress<ProgressBase>?)null, cancellationToken);
         await act.Should().ThrowAsync<Exception>();
     }
 
