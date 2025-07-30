@@ -169,7 +169,7 @@
     {
         try
         {
-            _researchService.OnProgressUpdated += TriggerStateHasChanged;
+            _researchService.OnProgressUpdated += OnProgressUpdated;
             isResearching = true;
             researchResult = await _researchService.StartResearchAsync(researchTopic);            
         }
@@ -180,9 +180,28 @@
         finally
         {
             isResearching = false;
-            _researchService.OnProgressUpdated -= TriggerStateHasChanged;
+            _researchService.OnProgressUpdated -= OnProgressUpdated;
 
         }
+    }
+
+    private async void OnProgressUpdated()
+    {
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("scrollToBottom");
+                }
+                catch
+                {
+                    // 処理上は特に問題ないため何もしない
+                }
+            });
+        });
     }
 
     private string GetStepContent(ProgressBase message)
@@ -284,20 +303,6 @@
 
     }
 
-    private async void TriggerStateHasChanged()
-    {
-        StateHasChanged();
-        
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("scrollToBottom");
-        }
-        catch
-        {
-            // 処理上は特に問題ないため何もしない
-        }
-    }
-
     private T? DeserializeProgressData<T>(ProgressBase progressMessage) where T : ProgressBase
     {
         try
@@ -369,7 +374,7 @@
 
     public ValueTask DisposeAsync()
     {
-        _researchService.OnProgressUpdated -= TriggerStateHasChanged;
+        _researchService.OnProgressUpdated -= OnProgressUpdated;
         return ValueTask.CompletedTask;
     }
 }
