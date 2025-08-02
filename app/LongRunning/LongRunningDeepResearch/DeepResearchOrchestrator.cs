@@ -1,11 +1,8 @@
 using DeepResearch.Core;
-using DeepResearch.Core.Models;
 using LongRunningDeepResearch.ChatClient;
 using LongRunningDeepResearch.SearchClient;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask;
-using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 
 namespace LongRunningDeepResearch;
@@ -19,23 +16,15 @@ public static class DeepResearchOrchestrator
         ILogger logger = context.CreateReplaySafeLogger(nameof(DeepResearchOrchestrator));
 
         var topic = context.GetInput<string>();
-        if (string.IsNullOrWhiteSpace(topic))
-        {
-            throw new ArgumentException("Topic cannot be null or empty.", nameof(topic));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(topic);
 
-        var deepResearchSearvice = new DeepResearchService(
+        var deepResearchService = new DeepResearchService(
             new OrchestratorChatClient(context),
             new OrchestratorSearchClient(context));
-        List<ProgressBase> progressReports = new List<ProgressBase>();
-        return await deepResearchSearvice.RunResearchAsync(topic, 
+        return await deepResearchService.RunResearchAsync(topic, 
             new DeepResearchOptions
             {
                 MaxResearchLoops = 3,
-            }, 
-            new Progress<ProgressBase>(progress =>
-            {
-                progressReports.Add(progress);
             }));
     }
 }
