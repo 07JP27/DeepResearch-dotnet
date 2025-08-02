@@ -39,6 +39,10 @@ var chatClient = new AzureOpenAIClient(
 ).GetChatClient("o4-mini")
 .AsIChatClient();
 
+// TimeProviderを明示的に作成して渡す
+var timeProvider = TimeProvider.System;
+var service = new DeepResearchService(chatClient, searchClient, timeProvider);
+
 // 進捗状況を表示するイベントハンドラー
 void OnProgressChanged(ProgressBase progress)
 {
@@ -102,8 +106,6 @@ var options = new DeepResearchOptions
     MaxCharacterPerSource = 1000, // ソースごとの最大文字数
     MaxSourceCountPerSearch = 5 // 検索ごとの最大ソース数
 };
-
-var service = new DeepResearchService(chatClient, searchClient);
 
 // 進捗状況を追跡するプログレスオブジェクトを作成
 var progress = new Progress<ProgressBase>(OnProgressChanged);

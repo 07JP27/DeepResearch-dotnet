@@ -7,6 +7,7 @@ public class WebResearchService
 {
     private readonly ILogger<WebResearchService> _logger;
     private readonly DeepResearchService _deepResearchService;
+    private readonly TimeProvider _timeProvider;
 
     public event Action? OnProgressUpdated;
 
@@ -14,10 +15,27 @@ public class WebResearchService
 
     public WebResearchService(
         ILogger<WebResearchService> logger,
-        DeepResearchService deepResearchService)
+        DeepResearchService deepResearchService,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _deepResearchService = deepResearchService;
+        _timeProvider = timeProvider;
+    }
+
+    // Progress作成ヘルパーメソッド
+    private T CreateProgress<T>() where T : ProgressBase, new()
+    {
+        var progress = new T();
+        progress.Timestamp = _timeProvider.GetUtcNow().DateTime;
+        return progress;
+    }
+
+    private T CreateProgress<T>(Action<T> configure) where T : ProgressBase, new()
+    {
+        var progress = CreateProgress<T>();
+        configure(progress);
+        return progress;
     }
 
     public async Task<ResearchResult?> StartResearchAsync(string topic, CancellationToken cancellationToken = default)
@@ -27,17 +45,20 @@ public class WebResearchService
             // 設定チェック
             if (_deepResearchService == null)
             {
-                NotifyClient(new ErrorProgress { Message = "DeepResearchService が初期化されていません。" });
+                NotifyClient(CreateProgress<ErrorProgress>(p => 
+                    p.Message = "DeepResearchService が初期化されていません。"));
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                NotifyClient(new ErrorProgress { Message = "トピックは必須です。" });
+                NotifyClient(CreateProgress<ErrorProgress>(p => 
+                    p.Message = "トピックは必須です。"));
                 return null;
             }
 
-            NotifyClient(new ThinkingProgress { Message = "調査を開始します..." });
+            NotifyClient(CreateProgress<ThinkingProgress>(p => 
+                p.Message = "調査を開始します..."));
 
             // 進捗状況を追跡するプログレスオブジェクトを作成
             var progress = new Progress<ProgressBase>(async progress => await OnProgressChanged(progress));
@@ -47,7 +68,8 @@ public class WebResearchService
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            NotifyClient(new ErrorProgress { Message = $"エラーが発生しました: {ex.Message}" });
+            NotifyClient(CreateProgress<ErrorProgress>(p => 
+                p.Message = $"エラーが発生しました: {ex.Message}"));
             return null;
         }
     }

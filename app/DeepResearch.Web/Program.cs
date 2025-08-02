@@ -16,6 +16,9 @@ builder.Services.AddRazorComponents()
 // Add HttpClient
 builder.Services.AddHttpClient();
 
+// Add TimeProvider for dependency injection
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+
 // Configure OpenAI
 var openAIEndpoint = builder.Configuration["OpenAI:Endpoint"];
 var deploymentName = builder.Configuration["OpenAI:DeploymentName"];

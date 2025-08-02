@@ -15,12 +15,14 @@ public class DeepResearchServiceTests
 {
     private readonly Mock<IChatClient> _mockChatClient;
     private readonly Mock<ISearchClient> _mockSearchClient;
+    private readonly TimeProvider _timeProvider;
     private readonly DeepResearchOptions _defaultOptions;
 
     public DeepResearchServiceTests()
     {
         _mockChatClient = new Mock<IChatClient>();
         _mockSearchClient = new Mock<ISearchClient>();
+        _timeProvider = TimeProvider.System;
         _defaultOptions = new DeepResearchOptions();
     }
 
@@ -28,7 +30,7 @@ public class DeepResearchServiceTests
     public void Constructor_WithAllParameters_ShouldInitializeService()
     {
         // Act
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
 
         // Assert
         service.Should().NotBeNull();
@@ -39,7 +41,7 @@ public class DeepResearchServiceTests
     {
         // The constructor doesn't validate parameters, so it will create an instance
         // Act & Assert
-        var act = () => new DeepResearchService(null!, _mockSearchClient.Object);
+        var act = () => new DeepResearchService(null!, _mockSearchClient.Object, _timeProvider);
         act.Should().NotThrow();
     }
 
@@ -48,7 +50,7 @@ public class DeepResearchServiceTests
     {
         // The constructor doesn't validate parameters, so it will create an instance
         // Act & Assert
-        var act = () => new DeepResearchService(_mockChatClient.Object, null!);
+        var act = () => new DeepResearchService(_mockChatClient.Object, null!, _timeProvider);
         act.Should().NotThrow();
     }
 
@@ -56,7 +58,7 @@ public class DeepResearchServiceTests
     public void DeepResearchService_WithValidParameters_ShouldCreateInstanceSuccessfully()
     {
         // Arrange & Act
-        var service1 = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service1 = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
 
         // Assert
         service1.Should().NotBeNull();
@@ -81,7 +83,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
 
         // Act & Assert
         // Since we haven't set up the mock chat client properly, this should throw
@@ -98,7 +100,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
 
         // Act & Assert
         // Should attempt to process the topic (will fail at chat client level, but that's expected)
@@ -111,7 +113,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var progressReports = new List<ProgressBase>();
         var progress = new Progress<ProgressBase>(progressReports.Add);
 
@@ -126,7 +128,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var cancellationToken = new CancellationToken();
 
         // Act & Assert
@@ -140,7 +142,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var progressReports = new List<ProgressBase>();
         var progress = new Progress<ProgressBase>(progressReports.Add);
         var cancellationToken = new CancellationToken();
