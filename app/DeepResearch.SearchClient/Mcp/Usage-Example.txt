@@ -1,0 +1,45 @@
+// Example of using MCP SearchClient instead of Tavily SearchClient
+// Replace lines 29-34 in Program.cs with the following:
+
+/*
+using DeepResearch.SearchClient.Mcp;
+
+// Configure MCP server connection
+var mcpConfig = new McpServerConfig
+{
+    Name = "Search Server",
+    Command = "python",  // or whatever command runs your MCP search server
+    Arguments = ["path/to/your/search-server.py"],
+    TimeoutMs = 30000
+};
+
+// Create MCP-based search client
+var mcpClient = new SearchMcpClient(mcpConfig);
+var searchClient = new McpSearchClient(mcpClient);
+*/
+
+// Alternative configuration examples:
+
+// For Node.js MCP server:
+var nodeConfig = new McpServerConfig
+{
+    Name = "Node Search Server",
+    Command = "node",
+    Arguments = ["search-server.js"]
+};
+
+// For .NET MCP server:
+var dotnetConfig = new McpServerConfig
+{
+    Name = "DotNet Search Server", 
+    Command = "dotnet",
+    Arguments = ["run", "--project", "SearchServer"]
+};
+
+// For executable MCP server:
+var executableConfig = new McpServerConfig
+{
+    Name = "Executable Search Server",
+    Command = "./search-server",
+    Arguments = ["--port", "8080"]
+};
