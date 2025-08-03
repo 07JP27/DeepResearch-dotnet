@@ -3,13 +3,11 @@ using DeepResearch.Core.Models;
 
 namespace DeepResearch.Web.Services;
 
-public class WebResearchService : IProgress<ProgressBase>
+public class WebResearchService
 {
     private readonly ILogger<WebResearchService> _logger;
     private readonly DeepResearchService _deepResearchService;
     private readonly TimeProvider _timeProvider;
-
-    public event Action? OnProgressUpdated;
 
     public List<ProgressBase> ProgressHistory { get; private set; } = new List<ProgressBase>();
 
@@ -38,59 +36,52 @@ public class WebResearchService : IProgress<ProgressBase>
         return progress;
     }
 
-    void IProgress<ProgressBase>.Report(ProgressBase value)
-    {
-        try
-        {
-            NotifyClient(value);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "進行状況の通知中にエラーが発生しました");
-        }
-    }
-
-    public async Task<ResearchResult?> StartResearchAsync(string topic, CancellationToken cancellationToken = default)
+    public async Task<ResearchResult?> StartResearchAsync(string topic, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken = default)
     {
         try
         {
             // 設定チェック
             if (_deepResearchService == null)
             {
-                NotifyClient(CreateProgress<ErrorProgress>(p =>
+                await NotifyClientAsync(asyncProgress, CreateProgress<ErrorProgress>(p =>
                     p.Message = "DeepResearchService が初期化されていません。"));
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                NotifyClient(CreateProgress<ErrorProgress>(p => p.Message = "トピックは必須です。"));
+                await NotifyClientAsync(asyncProgress, CreateProgress<ErrorProgress>(p => p.Message = "トピックは必須です。"));
                 return null;
             }
 
-            NotifyClient(CreateProgress<ThinkingProgress>(p => p.Message = "調査を開始します..."));
+            await NotifyClientAsync(asyncProgress, CreateProgress<ThinkingProgress>(p => p.Message = "調査を開始します..."));
 
             // Use the new async progress support
             return await _deepResearchService.RunResearchAsync(
                 topic, 
                 new DeepResearchOptions { MaxSourceCountPerSearch = 2 }, 
-                this, 
+                new AsyncProgress<ProgressBase>(async (progress, _) =>
+                {
+                    await NotifyClientAsync(asyncProgress, progress);
+                }), 
                 cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            NotifyClient(CreateProgress<ErrorProgress>(p => p.Message = $"エラーが発生しました: {ex.Message}"));
+            await NotifyClientAsync(
+                asyncProgress, 
+                CreateProgress<ErrorProgress>(p => p.Message = $"エラーが発生しました: {ex.Message}"));
             return null;
         }
     }
 
-    private void NotifyClient(ProgressBase progress)
+    private async Task NotifyClientAsync(IAsyncProgress<ProgressBase> asyncProgress, ProgressBase progress)
     {
         try
         {
             ProgressHistory.Add(progress);
-            OnProgressUpdated?.Invoke();
+            await asyncProgress.ReportAsync(progress);
         }
         catch (Exception ex)
         {
