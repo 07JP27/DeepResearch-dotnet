@@ -39,7 +39,7 @@ public class ProgressModelsTests
 
         // Assert
         // Since we removed DateTime.UtcNow default initialization, it should be DateTime.MinValue
-        progress.Timestamp.Should().Be(DateTime.MinValue);
+        progress.Timestamp.Should().Be(DateTimeOffset.MinValue);
     }
 
     [Fact]

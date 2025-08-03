@@ -15,8 +15,8 @@ namespace DeepResearch.Core.Models;
 public abstract class ProgressBase(string type)
 {
     public string Type => type;
-    
-    public DateTimeOffset Timestamp { get; set; }
+
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.MinValue;
 
     public string Step => Type;
 }

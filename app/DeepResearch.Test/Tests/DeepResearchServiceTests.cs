@@ -113,7 +113,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var mockAsyncProgress = new Mock<IAsyncProgress<ProgressBase>>();
 
         // Act & Assert
@@ -126,7 +126,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var mockAsyncProgress = new Mock<IAsyncProgress<ProgressBase>>();
 
         // Act & Assert
@@ -139,7 +139,7 @@ public class DeepResearchServiceTests
     public async Task RunResearchAsync_WithAsyncProgress_WithoutOptions_ShouldAttemptToProcess()
     {
         // Arrange
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var mockAsyncProgress = new Mock<IAsyncProgress<ProgressBase>>();
 
         // Act & Assert
@@ -156,7 +156,7 @@ public class DeepResearchServiceTests
     {
         // Arrange
         var options = new DeepResearchOptions { MaxResearchLoops = 1 };
-        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object);
+        var service = new DeepResearchService(_mockChatClient.Object, _mockSearchClient.Object, _timeProvider);
         var mockAsyncProgress = new Mock<IAsyncProgress<ProgressBase>>();
 
         // Act & Assert

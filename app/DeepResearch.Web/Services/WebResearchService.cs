@@ -3,7 +3,7 @@ using DeepResearch.Core.Models;
 
 namespace DeepResearch.Web.Services;
 
-public class WebResearchService : IAsyncProgress<ProgressBase>
+public class WebResearchService : IProgress<ProgressBase>
 {
     private readonly ILogger<WebResearchService> _logger;
     private readonly DeepResearchService _deepResearchService;
@@ -38,11 +38,11 @@ public class WebResearchService : IAsyncProgress<ProgressBase>
         return progress;
     }
 
-    public async ValueTask ReportAsync(ProgressBase value, CancellationToken cancellationToken = default)
+    void IProgress<ProgressBase>.Report(ProgressBase value)
     {
         try
         {
-            await NotifyClientAsync(value);
+            NotifyClient(value);
         }
         catch (Exception ex)
         {
@@ -57,18 +57,18 @@ public class WebResearchService : IAsyncProgress<ProgressBase>
             // 設定チェック
             if (_deepResearchService == null)
             {
-                await NotifyClientAsync(CreateProgress<ErrorProgress>(p =>
+                NotifyClient(CreateProgress<ErrorProgress>(p =>
                     p.Message = "DeepResearchService が初期化されていません。"));
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                await NotifyClientAsync(CreateProgress<ErrorProgress>(p => p.Message = "トピックは必須です。"));
+                NotifyClient(CreateProgress<ErrorProgress>(p => p.Message = "トピックは必須です。"));
                 return null;
             }
 
-            await NotifyClientAsync(CreateProgress<ThinkingProgress>(p => p.Message = "調査を開始します..."));
+            NotifyClient(CreateProgress<ThinkingProgress>(p => p.Message = "調査を開始します..."));
 
             // Use the new async progress support
             return await _deepResearchService.RunResearchAsync(
@@ -80,12 +80,12 @@ public class WebResearchService : IAsyncProgress<ProgressBase>
         catch (Exception ex)
         {
             _logger.LogError(ex, "調査中にエラーが発生しました。トピック: {Topic}", topic);
-            await NotifyClientAsync(CreateProgress<ErrorProgress>(p => p.Message = $"エラーが発生しました: {ex.Message}"));
+            NotifyClient(CreateProgress<ErrorProgress>(p => p.Message = $"エラーが発生しました: {ex.Message}"));
             return null;
         }
     }
 
-    private async ValueTask NotifyClientAsync(ProgressBase progress)
+    private void NotifyClient(ProgressBase progress)
     {
         try
         {
