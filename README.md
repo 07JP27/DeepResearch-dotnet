@@ -64,10 +64,11 @@ var searchClient = new TavilySearchClient(
     )
 );
 
-var ChatClient = new AzureOpenAIClient(
+var chatClient = new AzureOpenAIClient(
     new Uri(Environment.GetEnvironmentVariable("AOAI_BASE_URL") ?? throw new Exception("AOAI_BASE_URL is not set.")),
     new DefaultAzureCredential()
-).GetChatClient("o4-mini");
+).GetChatClient("o4-mini")
+.AsIChatClient();
 
 void OnProgressChanged(ProgressBase progress)
 {
@@ -87,8 +88,14 @@ Console.WriteLine("====================");
 Console.Write("Enter the topic you want to research: ");
 var researchTopic = Console.ReadLine();
 
-var service = new DeepResearchService(ChatClient, searchClient, OnProgressChanged, options);
-var result = await service.RunResearchAsync(researchTopic, CancellationToken.None);
+// Create DeepResearchService with TimeProvider
+var timeProvider = TimeProvider.System;
+var service = new DeepResearchService(chatClient, searchClient, timeProvider);
+
+// Create progress callback
+var progress = new Progress<ProgressBase>(OnProgressChanged);
+
+var result = await service.RunResearchAsync(researchTopic, options, progress, CancellationToken.None);
 
 Console.WriteLine("\n" + new string('=', 50));
 Console.WriteLine("📋 Research Results");
@@ -109,7 +116,7 @@ This object contains the research summary and related information.
 - Sources: List of information collected during the research
 - Images: List of images collected during the research
 
-Additionally, by specifying the onProgressChanged callback in the DeepResearchService constructor arguments, you can receive real-time notifications of the research status.
+Additionally, by passing an `IProgress<ProgressBase>` parameter to the `RunResearchAsync` method, you can receive real-time notifications of the research status.
 Progressive notifications are defined as classes for each step that inherit from ProgressBase.
 
 - QueryGenerationProgress: Notification class for query generation completion
@@ -165,6 +172,71 @@ void OnProgressChanged(ProgressBase progress)
             break;
     }
 }
+```
+
+## Asynchronous Progress Callbacks
+
+DeepResearch .NET supports asynchronous progress callbacks through the `IAsyncProgress<T>` interface, which is ideal for scenarios where progress handling itself needs to be asynchronous (e.g., database logging, network calls, or complex UI updates).
+
+### Using IAsyncProgress<T>
+
+You can use asynchronous progress callbacks in several ways:
+
+#### 1. Using AsyncProgress.FromFunc for simple async operations:
+
+```csharp
+var asyncProgress = AsyncProgress.FromFunc<ProgressBase>(async progress =>
+{
+    // Example: Log to database asynchronously
+    await LogProgressToDatabase(progress);
+    
+    // Example: Update UI asynchronously
+    await UpdateUI(progress);
+});
+
+var result = await service.RunResearchAsync(researchTopic, options, asyncProgress, CancellationToken.None);
+```
+
+#### 2. Using AsyncProgress.Create for operations that need cancellation support:
+
+```csharp
+var asyncProgress = AsyncProgress.Create<ProgressBase>(async (progress, cancellationToken) =>
+{
+    // Handle progress with cancellation support
+    await ProcessProgressAsync(progress, cancellationToken);
+});
+
+var result = await service.RunResearchAsync(researchTopic, asyncProgress, CancellationToken.None);
+```
+
+#### 3. Converting existing IProgress<T> to IAsyncProgress<T>:
+
+```csharp
+var progress = new Progress<ProgressBase>(OnProgressChanged);
+var asyncProgress = progress.ToAsyncProgress(); // Extension method
+
+var result = await service.RunResearchAsync(researchTopic, options, asyncProgress, CancellationToken.None);
+```
+
+### Available Method Overloads
+
+DeepResearchService provides multiple overloads to accommodate different usage patterns:
+
+```csharp
+// Basic usage
+await service.RunResearchAsync(topic);
+
+// With options
+await service.RunResearchAsync(topic, options);
+
+// With synchronous progress
+await service.RunResearchAsync(topic, options, progress, cancellationToken);
+
+// With asynchronous progress
+await service.RunResearchAsync(topic, options, asyncProgress, cancellationToken);
+
+// Asynchronous progress only
+await service.RunResearchAsync(topic, asyncProgress, cancellationToken);
 ```
 
 ## Sample Clients
