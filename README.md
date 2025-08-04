@@ -88,13 +88,9 @@ Console.WriteLine("====================");
 Console.Write("Enter the topic you want to research: ");
 var researchTopic = Console.ReadLine();
 
-// Create DeepResearchService with TimeProvider
 var timeProvider = TimeProvider.System;
 var service = new DeepResearchService(chatClient, searchClient, timeProvider);
-
-// Create progress callback
 var progress = new Progress<ProgressBase>(OnProgressChanged);
-
 var result = await service.RunResearchAsync(researchTopic, options, progress, CancellationToken.None);
 
 Console.WriteLine("\n" + new string('=', 50));

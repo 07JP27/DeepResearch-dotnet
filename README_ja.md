@@ -87,13 +87,9 @@ Console.WriteLine("====================");
 Console.Write("調査したいトピックを入力してください: ");
 var researchTopic = Console.ReadLine();
 
-// TimeProviderを使用してDeepResearchServiceを作成
 var timeProvider = TimeProvider.System;
 var service = new DeepResearchService(chatClient, searchClient, timeProvider);
-
-// プログレスコールバックを作成
 var progress = new Progress<ProgressBase>(OnProgressChanged);
-
 var result = await service.RunResearchAsync(researchTopic, options, progress, CancellationToken.None);
 
 Console.WriteLine("\n" + new string('=', 50));
