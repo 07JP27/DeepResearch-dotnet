@@ -36,7 +36,7 @@ public class DeepResearchService(
 
     public async Task<ResearchResult> RunResearchAsync(string topic, DeepResearchOptions? researchOptions = null, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
-        var asyncProgress = AsyncProgress<ProgressBase>.FromProgress(progress);
+        var asyncProgress = progress.ToAsyncProgress();
         return await RunResearchInternalAsync(topic, researchOptions, asyncProgress, cancellationToken);
     }
 

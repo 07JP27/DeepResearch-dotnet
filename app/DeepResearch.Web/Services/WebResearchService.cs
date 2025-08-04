@@ -60,7 +60,7 @@ public class WebResearchService
             return await _deepResearchService.RunResearchAsync(
                 topic, 
                 new DeepResearchOptions { MaxSourceCountPerSearch = 2 }, 
-                new AsyncProgress<ProgressBase>(async (progress, _) =>
+                AsyncProgress.Create(async (ProgressBase progress, CancellationToken _) =>
                 {
                     await NotifyClientAsync(asyncProgress, progress);
                 }), 

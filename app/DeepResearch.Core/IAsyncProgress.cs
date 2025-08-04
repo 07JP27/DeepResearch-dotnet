@@ -1,4 +1,4 @@
-namespace DeepResearch.Core.Models;
+namespace DeepResearch.Core;
 
 /// <summary>
 /// Provides support for asynchronous progress reporting with cancellation support.
