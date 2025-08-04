@@ -29,7 +29,7 @@ public class TavilySearchClient : ISearchClient
                 searchDepth: TavilySearchDepth.Basic,
                 includeRawContent: true,
                 includeImages: true,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var searchResult = new SearchResult
             {
