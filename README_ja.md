@@ -64,7 +64,7 @@ var searchClient = new TavilySearchClient(
     )
 );
 
-var ChatClient = new AzureOpenAIClient(
+var chatClient = new AzureOpenAIClient(
     new Uri(Environment.GetEnvironmentVariable("AOAI_BASE_URL") ?? throw new Exception("AOAI_BASE_URL is not set.")),
     new DefaultAzureCredential()
 ).GetChatClient("o4-mini");
@@ -88,7 +88,7 @@ Console.Write("調査したいトピックを入力してください: ");
 var researchTopic = Console.ReadLine();
 
 var timeProvider = TimeProvider.System;
-var service = new DeepResearchService(ChatClient, searchClient, timeProvider);
+var service = new DeepResearchService(chatClient, searchClient, timeProvider);
 var progress = new Progress<ProgressBase>(OnProgressChanged);
 var result = await service.RunResearchAsync(researchTopic, options, progress, CancellationToken.None);
 
@@ -111,7 +111,7 @@ DeepResearchService は、調査が完了した際に ResearchResult 型のオ�
 - Sources : 調査中に収集された情報のリスト
 - Images : 調査中に収集された画像のリスト
 
-また、DeepResearchService のコンストラクタ引数で onProgressChanged コールバックを指定することで、調査の通知状況をリアルタイムで受け取ることができます。
+また、`RunResearchAsync` メソッドに `IProgress<ProgressBase>` パラメータを渡すことで、調査の進捗状況をリアルタイムで受け取ることができます。
 逐次通知は ProgressBase を継承した各ステップごとのクラスが定義されています。
 
 - QueryGenerationProgress: クエリ生成完了の通知クラス
@@ -167,6 +167,71 @@ void OnProgressChanged(ProgressBase progress)
             break;
     }
 }
+```
+
+## 非同期プログレスコールバック
+
+DeepResearch .NET は `IAsyncProgress<T>` インターフェースを通じて非同期プログレスコールバックをサポートしており、プログレス処理自体が非同期である必要がある場合（データベースログ、ネットワーク呼び出し、複雑なUI更新など）に適しています。
+
+### IAsyncProgress<T> の使用方法
+
+非同期プログレスコールバックは、いくつかの方法で使用できます：
+
+#### 1. 簡単な非同期操作に AsyncProgress.FromFunc を使用:
+
+```csharp
+var asyncProgress = AsyncProgress.FromFunc<ProgressBase>(async progress =>
+{
+    // 例：データベースに非同期でログを記録
+    await LogProgressToDatabase(progress);
+    
+    // 例：UIを非同期で更新
+    await UpdateUI(progress);
+});
+
+var result = await service.RunResearchAsync(researchTopic, options, asyncProgress, CancellationToken.None);
+```
+
+#### 2. キャンセレーションサポートが必要な操作に AsyncProgress.Create を使用:
+
+```csharp
+var asyncProgress = AsyncProgress.Create<ProgressBase>(async (progress, cancellationToken) =>
+{
+    // キャンセレーションサポート付きでプログレスを処理
+    await ProcessProgressAsync(progress, cancellationToken);
+});
+
+var result = await service.RunResearchAsync(researchTopic, asyncProgress, CancellationToken.None);
+```
+
+#### 3. 既存の IProgress<T> を IAsyncProgress<T> に変換:
+
+```csharp
+var progress = new Progress<ProgressBase>(OnProgressChanged);
+var asyncProgress = progress.ToAsyncProgress(); // 拡張メソッド
+
+var result = await service.RunResearchAsync(researchTopic, options, asyncProgress, CancellationToken.None);
+```
+
+### 利用可能なメソッドオーバーロード
+
+DeepResearchService は、さまざまな使用パターンに対応するため、複数のオーバーロードを提供しています：
+
+```csharp
+// 基本的な使用方法
+await service.RunResearchAsync(topic);
+
+// オプション付き
+await service.RunResearchAsync(topic, options);
+
+// 同期プログレス付き
+await service.RunResearchAsync(topic, options, progress, cancellationToken);
+
+// 非同期プログレス付き
+await service.RunResearchAsync(topic, options, asyncProgress, cancellationToken);
+
+// 非同期プログレスのみ
+await service.RunResearchAsync(topic, asyncProgress, cancellationToken);
 ```
 
 ## サンプルクライアント

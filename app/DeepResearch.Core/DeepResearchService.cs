@@ -36,39 +36,55 @@ public class DeepResearchService(
 
     public async Task<ResearchResult> RunResearchAsync(string topic, DeepResearchOptions? researchOptions = null, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
     {
+        var asyncProgress = progress.ToAsyncProgress();
+        return await RunResearchInternalAsync(topic, researchOptions, asyncProgress, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ResearchResult> RunResearchAsync(string topic, DeepResearchOptions? researchOptions, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken = default)
+    {
+        return await RunResearchInternalAsync(topic, researchOptions, asyncProgress, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ResearchResult> RunResearchAsync(string topic, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken = default)
+    {
+        return await RunResearchInternalAsync(topic, null, asyncProgress, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ResearchResult> RunResearchInternalAsync(string topic, DeepResearchOptions? researchOptions, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken)
+    {
         researchOptions ??= new();
         var state = new ResearchState { ResearchTopic = topic };
 
-        await GenerateQueryAsync(state, progress, cancellationToken);
+        await GenerateQueryAsync(state, asyncProgress, cancellationToken).ConfigureAwait(false);
 
         while (state.ResearchLoopCount < researchOptions.MaxResearchLoops)
         {
-            progress?.Report(CreateProgress<RoutingProgress>(p =>
+            await ReportProgressAsync(CreateProgress<RoutingProgress>(p =>
             {
                 p.Decision = RoutingDecision.Continue;
                 p.LoopCount = state.ResearchLoopCount;
-            }));
+            }), asyncProgress, cancellationToken).ConfigureAwait(false);
 
-            await WebResearchAsync(state, researchOptions, progress, cancellationToken);
-            await SummarizeSourcesAsync(state, progress, cancellationToken);
-            await ReflectOnSummaryAsync(state, progress, cancellationToken);
+            await WebResearchAsync(state, researchOptions, asyncProgress, cancellationToken).ConfigureAwait(false);
+            await SummarizeSourcesAsync(state, asyncProgress, cancellationToken).ConfigureAwait(false);
+            await ReflectOnSummaryAsync(state, asyncProgress, cancellationToken).ConfigureAwait(false);
             state.ResearchLoopCount++;
         }
 
-        progress?.Report(CreateProgress<RoutingProgress>(p =>
+        await ReportProgressAsync(CreateProgress<RoutingProgress>(p =>
         {
             p.Decision = RoutingDecision.Finalize;
             p.LoopCount = state.ResearchLoopCount;
-        }));
+        }), asyncProgress, cancellationToken).ConfigureAwait(false);
 
-        await FinalizeSummaryAsync(state, researchOptions, progress, cancellationToken);
+        await FinalizeSummaryAsync(state, researchOptions, asyncProgress, cancellationToken).ConfigureAwait(false);
 
-        progress?.Report(CreateProgress<ResearchCompleteProgress>(p =>
+        await ReportProgressAsync(CreateProgress<ResearchCompleteProgress>(p =>
         {
             p.FinalSummary = state.RunningSummary;
             p.Sources = state.SourcesGathered;
             p.Images = state.Images;
-        }));
+        }), asyncProgress, cancellationToken).ConfigureAwait(false);
 
         return new ResearchResult
         {
@@ -79,7 +95,12 @@ public class DeepResearchService(
         };
     }
 
-    private async Task GenerateQueryAsync(ResearchState state, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default, bool isRetry = false)
+    private async ValueTask ReportProgressAsync(ProgressBase progressValue, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken)
+    {
+        await asyncProgress.ReportAsync(progressValue, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task GenerateQueryAsync(ResearchState state, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken, bool isRetry = false)
     {
         var prompt = string.Format(Prompts.QueryWriterInstructions, DateTime.Now.ToString("MMMM dd, yyyy"), state.ResearchTopic);
 
@@ -96,7 +117,7 @@ public class DeepResearchService(
             state.QueryGenerationMessages.Add(new(ChatRole.User, "Generate a query for web search:"));
         }
 
-        var result = await aiChatClient.GetResponseAsync<GenerateQueryResponse>(state.QueryGenerationMessages, _generateQueryOptions);
+        var result = await aiChatClient.GetResponseAsync<GenerateQueryResponse>(state.QueryGenerationMessages, _generateQueryOptions).ConfigureAwait(false);
         if (result.FinishReason != ChatFinishReason.Stop)
         {
             throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
@@ -113,29 +134,29 @@ public class DeepResearchService(
         state.SearchQuery = generateQueryResponse.Query;
         state.QueryRationale = generateQueryResponse.Rationale;
 
-        progress?.Report(CreateProgress<QueryGenerationProgress>(p =>
+        await ReportProgressAsync(CreateProgress<QueryGenerationProgress>(p =>
         {
             p.Query = state.SearchQuery;
             p.Rationale = state.QueryRationale;
-        }));
+        }), asyncProgress, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task WebResearchAsync(ResearchState state, DeepResearchOptions researchOptions, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
+    private async Task WebResearchAsync(ResearchState state, DeepResearchOptions researchOptions, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken)
     {
         var searchResult = await searchClient.SearchAsync(
             query: state.SearchQuery,
             maxResults: researchOptions.MaxSourceCountPerSearch,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Check if no results and retry limit not exceeded
         if ((searchResult.Results == null || searchResult.Results.Count == 0) &&
             state.QueryRetryCount < researchOptions.MaxSearchRetryAttempts)
         {
-            progress?.Report(CreateProgress<RoutingProgress>(p =>
+            await ReportProgressAsync(CreateProgress<RoutingProgress>(p =>
             {
                 p.Decision = RoutingDecision.RetrySearch;
                 p.LoopCount = state.QueryRetryCount;
-            }));
+            }), asyncProgress, cancellationToken).ConfigureAwait(false);
 
             state.QueryRetryCount++;
 
@@ -143,16 +164,16 @@ public class DeepResearchService(
             if (string.IsNullOrEmpty(state.RunningSummary))
             {
                 // No summary yet, regenerate initial query with retry message
-                await GenerateQueryAsync(state, progress, cancellationToken, isRetry: true);
+                await GenerateQueryAsync(state, asyncProgress, cancellationToken, isRetry: true).ConfigureAwait(false);
             }
             else
             {
                 // Have summary, use reflection to generate new query with retry message
-                await ReflectOnSummaryAsync(state, progress, cancellationToken, isRetry: true);
+                await ReflectOnSummaryAsync(state, asyncProgress, cancellationToken, isRetry: true).ConfigureAwait(false);
             }
 
             // Recursively call WebResearchAsync with new query
-            await WebResearchAsync(state, researchOptions, progress, cancellationToken);
+            await WebResearchAsync(state, researchOptions, asyncProgress, cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -170,14 +191,14 @@ public class DeepResearchService(
 
         state.WebResearchResults.Add(Formatting.DeduplicateAndFormatSources(searchResult, researchOptions.MaxCharacterPerSource));
 
-        progress?.Report(CreateProgress<WebResearchProgress>(p =>
+        await ReportProgressAsync(CreateProgress<WebResearchProgress>(p =>
         {
             p.Sources = searchResult.Results ?? [];
             p.Images = searchResult.Images ?? [];
-        }));
+        }), asyncProgress, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task SummarizeSourcesAsync(ResearchState state, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
+    private async Task SummarizeSourcesAsync(ResearchState state, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken)
     {
         var mostRecent = state.WebResearchResults.Count > 0 ? state.WebResearchResults[^1] : "";
         string humanMessage;
@@ -193,17 +214,17 @@ public class DeepResearchService(
         var result = await aiChatClient.GetResponseAsync([
             new (ChatRole.System, Prompts.SummarizerInstructions),
             new (ChatRole.User, humanMessage),
-        ]);
+        ]).ConfigureAwait(false);
         state.RunningSummary = result.Text.Trim();
         state.SummariesGathered.Add(state.RunningSummary);
 
-        progress?.Report(CreateProgress<SummarizeProgress>(p =>
+        await ReportProgressAsync(CreateProgress<SummarizeProgress>(p =>
         {
             p.Summary = state.RunningSummary;
-        }));
+        }), asyncProgress, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task ReflectOnSummaryAsync(ResearchState state, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default, bool isRetry = false)
+    private async Task ReflectOnSummaryAsync(ResearchState state, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken, bool isRetry = false)
     {
         var prompt = string.Format(Prompts.ReflectionInstructions, state.ResearchTopic);
         var baseMessage = $"Reflect on our existing knowledge: \n===\n{state.RunningSummary},\n===\nAnd now identify a knowledge gap and generate a follow-up web search query:";
@@ -221,7 +242,7 @@ public class DeepResearchService(
             state.ReflectionMessages.Add(new(ChatRole.User, baseMessage));
         }
 
-        var result = await aiChatClient.GetResponseAsync<ReflectionOnSummaryResponse>(state.ReflectionMessages, _reflectionOnSummaryOptions);
+        var result = await aiChatClient.GetResponseAsync<ReflectionOnSummaryResponse>(state.ReflectionMessages, _reflectionOnSummaryOptions).ConfigureAwait(false);
         if (result.FinishReason != ChatFinishReason.Stop)
         {
             throw new InvalidOperationException($"AI chat completion failed with finish reason: {result.FinishReason}");
@@ -239,16 +260,16 @@ public class DeepResearchService(
         state.SearchQuery = reflectionResponse.FollowUpQuery;
         state.KnowledgeGap = reflectionResponse.KnowledgeGap;
 
-        progress?.Report(CreateProgress<ReflectionProgress>(p =>
+        await ReportProgressAsync(CreateProgress<ReflectionProgress>(p =>
         {
             p.Query = state.SearchQuery;
             p.KnowledgeGap = state.KnowledgeGap;
-        }));
+        }), asyncProgress, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task FinalizeSummaryAsync(ResearchState state, DeepResearchOptions researchOptions, IProgress<ProgressBase>? progress = null, CancellationToken cancellationToken = default)
+    private async Task FinalizeSummaryAsync(ResearchState state, DeepResearchOptions researchOptions, IAsyncProgress<ProgressBase> asyncProgress, CancellationToken cancellationToken)
     {
-        progress?.Report(CreateProgress<FinalizeProgress>());
+        await ReportProgressAsync(CreateProgress<FinalizeProgress>(), asyncProgress, cancellationToken).ConfigureAwait(false);
 
         if (researchOptions.EnableSummaryConsolidation)
         {
@@ -258,7 +279,7 @@ public class DeepResearchService(
                 new (ChatRole.User, $"<TOPIC>{state.ResearchTopic} </TOPIC>")
             ];
 
-            var result = await aiChatClient.GetResponseAsync(messages);
+            var result = await aiChatClient.GetResponseAsync(messages).ConfigureAwait(false);
             state.RunningSummary = result.Text.Trim();
         }
     }

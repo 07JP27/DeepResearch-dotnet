@@ -8,7 +8,7 @@
 @inject HttpClient HttpClient
 @inject WebResearchService _researchService
 @inject NavigationManager Navigation
-@implements IAsyncDisposable
+@implements IAsyncProgress<ProgressBase>
 @rendermode InteractiveServer
 
 <PageTitle>Deep Research</PageTitle>
@@ -25,11 +25,11 @@
                 {
                     <div class="flex items-center text-sm text-gray-600">
                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg"
-                            fill="none" viewBox="0 0 24 24">
+                             fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
                             </circle>
                             <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                             </path>
                         </svg>
                         調査中...
@@ -37,7 +37,7 @@
                 }
             </div>
         </div>
-        
+
         <!-- Progress Bar -->
         @if (isResearching)
         {
@@ -54,19 +54,19 @@
             <h2 class="text-2xl font-bold text-gray-900 mb-4">調査トピックを入力してください</h2>
             <div class="flex space-x-4">
                 <input @bind="researchTopic" placeholder="例: AIによる医療画像診断の最新動向"
-                    class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled="@isResearching" />
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       disabled="@isResearching" />
                 <button @onclick="StartResearch" disabled="@(isResearching || string.IsNullOrWhiteSpace(researchTopic))"
-                    class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     @if (isResearching)
                     {
                         <span class="flex items-center">
                             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" viewBox="0 0 24 24">
+                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
                                 </circle>
                                 <path class="opacity-75" fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                                 </path>
                             </svg>
                             調査中...
@@ -108,7 +108,7 @@
         {
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="text-2xl font-semibold text-gray-900 mb-4">調査レポート</h3>
-                
+
                 <hr class="my-6 border-gray-200" />
 
                 <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">調査トピック</h4>
@@ -123,7 +123,7 @@
 
                 <hr class="my-6 border-gray-200" />
 
-                @if(researchResult.Sources.Any())
+                @if (researchResult.Sources.Any())
                 {
                     <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">参考文献</h4>
                     <ul class="list-disc list-inside mb-6">
@@ -134,7 +134,7 @@
                                     @source.Title
                                 </a>
                             </li>
-                        }   
+                        }
                     </ul>
                 }
 
@@ -169,9 +169,8 @@
     {
         try
         {
-            _researchService.OnProgressUpdated += TriggerStateHasChanged;
             isResearching = true;
-            researchResult = await _researchService.StartResearchAsync(researchTopic);            
+            researchResult = await _researchService.StartResearchAsync(researchTopic, this);
         }
         catch (Exception ex)
         {
@@ -180,9 +179,16 @@
         finally
         {
             isResearching = false;
-            _researchService.OnProgressUpdated -= TriggerStateHasChanged;
-
         }
+    }
+
+    async ValueTask IAsyncProgress<ProgressBase>.ReportAsync(ProgressBase value, CancellationToken cancellationToken)
+    {
+        await InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await JSRuntime.InvokeVoidAsync("scrollToBottom");
+        });
     }
 
     private string GetStepContent(ProgressBase message)
@@ -196,7 +202,7 @@
                 var thinkingProgress = DeserializeProgressData<ThinkingProgress>(message);
                 content = thinkingProgress?.Message ?? "";
                 break;
-                
+
             case ProgressTypes.GenerateQuery:
                 var queryProgress = DeserializeProgressData<QueryGenerationProgress>(message);
                 if (queryProgress != null)
@@ -204,7 +210,7 @@
                     content = $"<strong>検索クエリ:</strong> {queryProgress.Query}<br><strong>根拠:</strong> {queryProgress.Rationale}";
                 }
                 break;
-                
+
             case ProgressTypes.Routing:
                 var routingProgress = DeserializeProgressData<RoutingProgress>(message);
                 if (routingProgress != null)
@@ -224,7 +230,7 @@
                     };
                 }
                 break;
-                
+
             case ProgressTypes.WebResearch:
                 var webResearchProgress = DeserializeProgressData<WebResearchProgress>(message);
                 if (webResearchProgress != null)
@@ -232,7 +238,7 @@
                     content = $"<strong>検索結果:</strong> {webResearchProgress.Sources.Count} 件のソースを発見";
                 }
                 break;
-                
+
             case ProgressTypes.Summarize:
                 var summarizeProgress = DeserializeProgressData<SummarizeProgress>(message);
                 if (summarizeProgress != null)
@@ -246,7 +252,7 @@
                     content = $"<strong>要約:</strong><br>{summaryText}";
                 }
                 break;
-                
+
             case ProgressTypes.Reflection:
                 var reflectionProgress = DeserializeProgressData<ReflectionProgress>(message);
                 if (reflectionProgress != null)
@@ -254,7 +260,7 @@
                     content = $"<strong>知識ギャップ:</strong> {reflectionProgress.KnowledgeGap}<br><strong>次の検索クエリ:</strong> {reflectionProgress.Query}";
                 }
                 break;
-                
+
             case ProgressTypes.Finalize:
                 var finalizeProgress = DeserializeProgressData<FinalizeProgress>(message);
                 if (finalizeProgress != null)
@@ -262,7 +268,7 @@
                     content = "<strong>最終レポートを準備中...</strong>";
                 }
                 break;
-                
+
             case ProgressTypes.ResearchComplete:
                 var researchCompleteProgress = DeserializeProgressData<ResearchCompleteProgress>(message);
                 if (researchCompleteProgress != null)
@@ -270,7 +276,7 @@
                     content = "<strong>調査が完了しました！</strong>";
                 }
                 break;
-                
+
             case ProgressTypes.Error:
                 var errorProgress = DeserializeProgressData<ErrorProgress>(message);
                 if (errorProgress != null)
@@ -282,20 +288,6 @@
 
         return content;
 
-    }
-
-    private async void TriggerStateHasChanged()
-    {
-        StateHasChanged();
-        
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("scrollToBottom");
-        }
-        catch
-        {
-            // 処理上は特に問題ないため何もしない
-        }
     }
 
     private T? DeserializeProgressData<T>(ProgressBase progressMessage) where T : ProgressBase
@@ -366,10 +358,4 @@
         "error" => "エラー",
         _ => "処理中"
     };
-
-    public ValueTask DisposeAsync()
-    {
-        _researchService.OnProgressUpdated -= TriggerStateHasChanged;
-        return ValueTask.CompletedTask;
-    }
 }
