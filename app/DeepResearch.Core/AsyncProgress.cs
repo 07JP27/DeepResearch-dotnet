@@ -101,7 +101,7 @@ public class AsyncProgress<T> : IAsyncProgress<T>
     {
         if (_progressFunc != null)
         {
-            await _progressFunc(value, cancellationToken).ConfigureAwait(false);
+            await _progressFunc(value, cancellationToken);
         }
     }
 }
