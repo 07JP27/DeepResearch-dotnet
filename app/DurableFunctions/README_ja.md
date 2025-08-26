@@ -116,6 +116,45 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:7283/api/DeepResearchStart
 - Blazor アプリは SignalR 接続を確立し、`ProgressEnvelope` を受信します。
 - `DeepResearchClient.StartDeepResearchAsync` は `IAsyncEnumerable<ProgressBase>` を返すため、UI の逐次更新が容易です。
 
+## アーキテクチャ関連図
+
+以下は Blazor（サーバーコンポーネント）と Durable Functions、Azure OpenAI、Azure SignalR、ブラウザユーザー間のやり取りを示す簡略図です。
+
+```mermaid
+flowchart TD
+  user[ユーザー/ブラウザ]
+  subgraph Web [Blazor Web - Server Components]
+    direction TB
+    client[DeepResearchClient]
+    hubconn[SignalR HubConnection]
+  end
+  subgraph Functions [Azure Functions - Durable Functions]
+    direction TB
+    starter[HTTP Trigger: DeepResearchStarter]
+    orch[Orchestrator: DeepResearchOrchestrator]
+    notify[Activity: NotifyProgressActivity - SignalR]
+  end
+  subgraph Azure [Azure サービス]
+    direction TB
+    aoai[Azure OpenAI: o4-mini]
+    signalr[Azure SignalR Service - Serverless]
+  end
+  tavily[Tavily API]
+
+  user -->|リサーチ開始| client
+  client -->|sessionId と topic を送信| starter
+  client -->|negotiate sessionId| signalr
+  hubconn -->|接続と progress 購読| signalr
+
+  starter -->|orchestration 開始| orch
+  orch -->|検索| tavily
+  orch -->|推論・要約| aoai
+  orch -->|進捗通知 ProgressEnvelope| notify
+  notify -->|ユーザー sessionId 宛てに progress| signalr
+  signalr -->|progress を Push| hubconn
+  hubconn -->|UI 更新| user
+```
+
 ## トラブルシューティング
 
  - `orchestrations/{instanceId}` が 404: インスタンス ID が誤っているか、Functions のポートが異なります。スタータの応答と Functions のログを確認してください。

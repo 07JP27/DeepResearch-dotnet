@@ -118,6 +118,45 @@ The response includes HTTP management URLs you can poll (e.g., runtime status AP
 - The Blazor app establishes a SignalR connection and receives `ProgressEnvelope` messages.
 - `DeepResearchClient.StartDeepResearchAsync` returns an IAsyncEnumerable<ProgressBase> for easy consumption and UI updates.
 
+## Architecture diagram
+
+The diagram below shows how the Blazor web app, Durable Functions backend, Azure OpenAI, Azure SignalR, and the browser user interact.
+
+```mermaid
+flowchart TD
+  user[User/Browser]
+  subgraph Web [Blazor Web - Server Components]
+    direction TB
+    client[DeepResearchClient]
+    hubconn[SignalR HubConnection]
+  end
+  subgraph Functions [Azure Functions - Durable Functions]
+    direction TB
+    starter[HTTP Trigger: DeepResearchStarter]
+    orch[Orchestrator: DeepResearchOrchestrator]
+    notify[Activity: NotifyProgressActivity - SignalR]
+  end
+  subgraph Azure [Azure Services]
+    direction TB
+    aoai[Azure OpenAI: o4-mini]
+    signalr[Azure SignalR Service - Serverless]
+  end
+  tavily[Tavily API]
+
+  user -->|Start research| client
+  client -->|send sessionId + topic| starter
+  client -->|negotiate sessionId| signalr
+  hubconn -->|connect & subscribe progress| signalr
+
+  starter -->|start orchestration| orch
+  orch -->|search| tavily
+  orch -->|LLM/summary| aoai
+  orch -->|progress notify ProgressEnvelope| notify
+  notify -->|progress to user sessionId| signalr
+  signalr -->|push progress| hubconn
+  hubconn -->|UI updates| user
+```
+
 ## Troubleshooting
 
  - 404 on `orchestrations/{instanceId}`: the instance ID is wrong or the Functions port differs. Check the starter response payload and the Functions console logs.
