@@ -178,11 +178,11 @@
         if (isResearching) return;
         try
         {
-            string userId = Guid.NewGuid().ToString();
+            string sessionId = Guid.NewGuid().ToString();
             progressHistory.Clear();
             _currentResearchTopic = researchTopic;
             isResearching = true;
-            await foreach (var message in DeepResearchClient.StartDeepResearchAsync(userId, researchTopic, 3))
+            await foreach (var message in DeepResearchClient.StartDeepResearchAsync(sessionId, researchTopic, 3))
             {
                 progressHistory.Add(message);
                 await InvokeAsync(async () =>

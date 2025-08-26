@@ -9,20 +9,13 @@ namespace DeepResearch.DurableFunctions.Web.Client;
 
 public class DeepResearchClient(HttpClient httpClient, IConfiguration configuration)
 {
-    // For deserializing Azure Functions SignalR negotiate response
-    private sealed class NegotiateResponse
-    {
-        public string? Url { get; set; }
-        public string? AccessToken { get; set; }
-    }
-
     public async IAsyncEnumerable<ProgressBase> StartDeepResearchAsync(
-        string userId,
+        string sessionId,
         string topic,
         int maxResearchLoops = 3,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(userId);
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
         ArgumentException.ThrowIfNullOrEmpty(topic);
 
         // Create a channel to adapt SignalR push callbacks to IAsyncEnumerable
@@ -42,7 +35,7 @@ public class DeepResearchClient(HttpClient httpClient, IConfiguration configurat
             // 2) Build the SignalR connection using negotiated info
             var realBaseAddress = ResolveRealBaseAddress();
             connection = new HubConnectionBuilder()
-                .WithUrl(new Uri(new(realBaseAddress), $"api?userId={WebUtility.UrlEncode(userId)}"))
+                .WithUrl(new Uri(new(realBaseAddress), $"api?sessionId={WebUtility.UrlEncode(sessionId)}"))
                 .WithAutomaticReconnect()
                 .Build();
 
@@ -91,7 +84,7 @@ public class DeepResearchClient(HttpClient httpClient, IConfiguration configurat
             // 5) Kick off the orchestrator (relative URL)
             var response = await httpClient.PostAsJsonAsync(
                 "api/DeepResearchStarter",
-                new DeepResearchOrchestratorArguments(userId, topic, maxResearchLoops),
+                new DeepResearchOrchestratorArguments(sessionId, topic, maxResearchLoops),
                 JsonSerializerOptions.Web,
                 cancellationToken);
 

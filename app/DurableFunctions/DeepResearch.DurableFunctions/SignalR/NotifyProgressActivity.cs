@@ -15,15 +15,15 @@ public class NotifyProgressActivity(IServiceProvider serviceProvider, ILogger<No
     public async Task<HttpResponseData> Negotiate(
     [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
-        var userId = req.Query["userId"];
-        if (string.IsNullOrEmpty(userId))
+        var sessionId = req.Query["sessionId"];
+        if (string.IsNullOrEmpty(sessionId))
         {
             var response = req.CreateResponse(HttpStatusCode.BadRequest);
-            await response.WriteStringAsync("User ID is required.");
+            await response.WriteStringAsync("Session ID is required.");
             return response;
         }
 
-        var negotiateResponse = await NegotiateAsync(new() { UserId = userId });
+        var negotiateResponse = await NegotiateAsync(new() { UserId = sessionId });
         var responseData = req.CreateResponse(HttpStatusCode.OK);
         await responseData.WriteBytesAsync(negotiateResponse.ToArray());
         return responseData;
@@ -33,16 +33,16 @@ public class NotifyProgressActivity(IServiceProvider serviceProvider, ILogger<No
     public async Task Run([ActivityTrigger] NotifyProgressArguments args)
     {
         logger.LogInformation("Notifying user {UserId} with progress: {Progress}", 
-            args.UserId, 
+            args.SessionId, 
             args.Progress.Progress.Type);
         try
         {
-            await Clients.User(args.UserId).SendAsync("progress", JsonSerializer.Serialize(args.Progress, JsonSerializerOptions.Web));
+            await Clients.User(args.SessionId).SendAsync("progress", JsonSerializer.Serialize(args.Progress, JsonSerializerOptions.Web));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error notifying user {UserId} with progress: {Progress}", 
-                args.UserId, 
+                args.SessionId, 
                 args.Progress.Progress.Type);
             throw;
         }
