@@ -67,6 +67,8 @@ Durable Functions は、長時間・多イテレーションのリサーチに�
 2) スタートアッププロジェクトに `DeepResearch.DurableFunctions.AppHost` を選択します。
 3) 実行（F5）。Aspire AppHost が起動し、Functions と Web が立ち上がります。Aspire のダッシュボードから Web UI にアクセスできます。
 
+
+
 ## .NET CLI での実行
 
 1) 上記の前提・設定を行います。
