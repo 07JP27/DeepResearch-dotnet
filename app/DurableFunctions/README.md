@@ -97,7 +97,7 @@ Example request body:
 
 ```json
 {
-  "userId": "user-123",
+  "sessionId": "user-123",
   "topic": "What's new in .NET 9?",
   "maxResearchLoops": 4
 }
@@ -106,7 +106,7 @@ Example request body:
 Example (PowerShell):
 
 ```powershell
-$body = @{ userId = "user-123"; topic = ".NET 9 new features"; maxResearchLoops = 3 } | ConvertTo-Json
+$body = @{ sessionId = "user-123"; topic = ".NET 9 new features"; maxResearchLoops = 3 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://localhost:7283/api/DeepResearchStarter" -ContentType 'application/json' -Body $body
 ```
 
@@ -122,4 +122,4 @@ The response includes HTTP management URLs you can poll (e.g., runtime status AP
 
  - 404 on `orchestrations/{instanceId}`: the instance ID is wrong or the Functions port differs. Check the starter response payload and the Functions console logs.
  - No progress updates in UI: verify SignalR connection, check browser devtools console, and Functions logs for `NotifyProgressActivity`.
- - HTTP 400 when starting: ensure `topic` is provided and not empty; `userId` must be included for progress routing.
+ - HTTP 400 when starting: ensure `topic` is provided and not empty; `sessionId` must be included for progress routing.

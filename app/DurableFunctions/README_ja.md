@@ -95,7 +95,7 @@ dotnet run --project .\DeepResearch.DurableFunctions.AppHost\DeepResearch.Durabl
 
 ```json
 {
-  "userId": "user-123",
+  "sessionId": "user-123",
   "topic": ".NET 9 の新機能は？",
   "maxResearchLoops": 4
 }
@@ -104,7 +104,7 @@ dotnet run --project .\DeepResearch.DurableFunctions.AppHost\DeepResearch.Durabl
 PowerShell 例:
 
 ```powershell
-$body = @{ userId = "user-123"; topic = ".NET 9 の新機能"; maxResearchLoops = 3 } | ConvertTo-Json
+$body = @{ sessionId = "user-123"; topic = ".NET 9 の新機能"; maxResearchLoops = 3 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://localhost:7283/api/DeepResearchStarter" -ContentType 'application/json' -Body $body
 ```
 
@@ -120,4 +120,4 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:7283/api/DeepResearchStart
 
  - `orchestrations/{instanceId}` が 404: インスタンス ID が誤っているか、Functions のポートが異なります。スタータの応答と Functions のログを確認してください。
  - UI に進捗が出ない: SignalR 接続が成立しているか、ブラウザのコンソールと Functions の `NotifyProgressActivity` ログを確認してください。
- - 起動時 400: `topic` が空でないか、`userId` を含めているかを確認してください。
+ - 起動時 400: `topic` が空でないか、`sessionId` を含めているかを確認してください。

@@ -2,7 +2,7 @@ POST http://localhost:7283/api/DeepResearchStarter
 Content-Type: application/json
 
 {
-  "userId": "user-123",
+  "sessionId": "user-123",
   "topic": ".NET 9 の新機能は？",
   "maxResearchLoops": 3
 }
