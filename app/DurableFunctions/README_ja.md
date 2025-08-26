@@ -118,6 +118,9 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:7283/api/DeepResearchStart
 - Blazor アプリは SignalR 接続を確立し、`ProgressEnvelope` を受信します。
 - `DeepResearchClient.StartDeepResearchAsync` は `IAsyncEnumerable<ProgressBase>` を返すため、UI の逐次更新が容易です。
 
+> 注記（重要）
+> Azure Functions の SignalR バインド（Serverless/REST 経由）はメッセージ本文の上限が約 1 MB（ヘッダー 16 KB）です。途中経過や最終結果のペイロードが 1 MB を超えると、`AzureSignalRRuntimeException`（内側は 413 Request Entity Too Large）が発生します。
+
 ## アーキテクチャ関連図
 
 以下は Blazor（サーバーコンポーネント）と Durable Functions、Azure OpenAI、Azure SignalR、ブラウザユーザー間のやり取りを示す簡略図です。

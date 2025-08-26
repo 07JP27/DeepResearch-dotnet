@@ -118,6 +118,9 @@ The response includes HTTP management URLs you can poll (e.g., runtime status AP
 - The Blazor app establishes a SignalR connection and receives `ProgressEnvelope` messages.
 - `DeepResearchClient.StartDeepResearchAsync` returns an IAsyncEnumerable<ProgressBase> for easy consumption and UI updates.
 
+> Note (important)
+> The Azure Functions SignalR binding in Serverless mode sends via REST and enforces a ~1 MB request body limit (and ~16 KB for headers). If an intermediate progress or final result payload exceeds 1 MB, you can see `AzureSignalRRuntimeException` with an inner 413 Request Entity Too Large.
+
 ## Architecture diagram
 
 The diagram below shows how the Blazor web app, Durable Functions backend, Azure OpenAI, Azure SignalR, and the browser user interact.
