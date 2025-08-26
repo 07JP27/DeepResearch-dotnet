@@ -5,7 +5,6 @@ using DeepResearch.DurableFunctions.SignalR;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace DeepResearch.DurableFunctions;
 

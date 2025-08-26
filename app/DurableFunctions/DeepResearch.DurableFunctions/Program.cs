@@ -1,5 +1,4 @@
 using Azure.AI.OpenAI;
-using DeepResearch.Core;
 using DeepResearch.DurableFunctions.Adapters.Activities;
 using DeepResearch.DurableFunctions.Options;
 using Microsoft.Azure.Functions.Worker;
