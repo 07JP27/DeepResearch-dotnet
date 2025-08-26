@@ -11,12 +11,16 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.AI;
 using DeepResearch.SearchClient.Tavily;
 using DeepResearch.Core.SearchClient;
+using DeepResearch.DurableFunctions.SignalR;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 builder.Configuration.AddUserSecrets<Program>();
 builder.AddServiceDefaults();
 
 builder.ConfigureFunctionsWebApplication();
+
+// Register ServerlessHub for SignalR
+builder.Services.AddServerlessHub<NotifyProgressActivity>();
 
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()

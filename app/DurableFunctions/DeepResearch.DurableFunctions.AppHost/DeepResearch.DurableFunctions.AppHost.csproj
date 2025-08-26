@@ -11,11 +11,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.0" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.1" />
     <PackageReference Include="Aspire.Hosting.Azure.Functions" Version="(9.4-*,9.5]" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DeepResearch.DurableFunctions.Web\DeepResearch.DurableFunctions.Web.csproj" />
     <ProjectReference Include="..\DeepResearch.DurableFunctions\DeepResearch.DurableFunctions.csproj" />
   </ItemGroup>
 

@@ -1,8 +1,9 @@
-﻿using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+﻿using DeepResearch.Core.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using System.Text.Json;
 
 namespace DeepResearch.DurableFunctions;
@@ -10,17 +11,15 @@ namespace DeepResearch.DurableFunctions;
 public class DeepResearchStarter(ILogger<DeepResearchStarter> logger)
 {
     [Function(nameof(DeepResearchStarter))]
-    public async Task<HttpResponseData> HttpStart(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
+    public async Task<IResult> HttpStart(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req,
         [DurableClient] DurableTaskClient client,
         FunctionContext executionContext)
     {
         var body = await JsonSerializer.DeserializeAsync<DeepResearchOrchestratorArguments>(req.Body, JsonSerializerOptions.Web);
         if (body is null || string.IsNullOrWhiteSpace(body.Topic))
         {
-            var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-            await errorResponse.WriteStringAsync("Invalid request body. 'Topic' is required.");
-            return errorResponse;
+            return Results.BadRequest("Invalid request body. 'Topic' is required.");
         }
 
         var instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
@@ -28,6 +27,7 @@ public class DeepResearchStarter(ILogger<DeepResearchStarter> logger)
             body);
 
         logger.LogInformation("Started orchestration with ID = '{instanceId}'.", instanceId);
-        return await client.CreateCheckStatusResponseAsync(req, instanceId);
+        var payload = client.CreateHttpManagementPayload(instanceId);
+        return Results.Ok(payload);
     }
 }

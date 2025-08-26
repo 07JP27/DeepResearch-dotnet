@@ -1,4 +1,4 @@
 ﻿using DeepResearch.Core.Models;
 
-namespace DeepResearch.DurableFunctions;
+namespace DeepResearch.Core.Models;
 public record ProgressEnvelope(ProgressBase Progress);

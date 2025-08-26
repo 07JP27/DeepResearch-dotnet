@@ -1,6 +1,7 @@
 ﻿using DeepResearch.Core;
 using DeepResearch.Core.Models;
 using DeepResearch.DurableFunctions.Adapters;
+using DeepResearch.DurableFunctions.SignalR;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ public static class DeepResearchOrchestrator
         ILogger logger = context.CreateReplaySafeLogger(nameof(DeepResearchOrchestrator));
 
         var args = context.GetInput<DeepResearchOrchestratorArguments>();
+        ArgumentNullException.ThrowIfNull(args);
         ArgumentException.ThrowIfNullOrEmpty(args.Topic);
 
         var deepResearchService = new DeepResearchService(
@@ -31,8 +33,8 @@ public static class DeepResearchOrchestrator
         var progress = new AsyncProgress<ProgressBase>(async (update, _) =>
         {
             await context.CallActivityAsync(
-                nameof(ReportProgressActivity),
-                new ProgressEnvelope(update),
+                nameof(NotifyProgressActivity),
+                new NotifyProgressArguments(args.UserId, new(update)),
                 DefaultTaskOptions);
         });
         return await deepResearchService.RunResearchAsync(args.Topic,

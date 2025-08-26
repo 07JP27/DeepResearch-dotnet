@@ -1,0 +1,372 @@
+﻿@page "/"
+@using DeepResearch.Core
+@using DeepResearch.Core.Models
+@using System.Text.Json
+@using DeepResearch.DurableFunctions.Web.Client
+@using Markdig
+@inject IJSRuntime JSRuntime
+@inject DeepResearchClient DeepResearchClient
+@inject NavigationManager Navigation
+@inject ILogger<Home> Logger
+
+<PageTitle>Deep Research</PageTitle>
+
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Deep Research</h1>
+                </div>
+                @if (isResearching)
+                {
+                    <div class="flex items-center text-sm text-gray-600">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg"
+                             fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        調査中...
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        @if (isResearching)
+        {
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
+                <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 animate-pulse"></div>
+            </div>
+        }
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+        <!-- Research Input Form -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">調査トピックを入力してください</h2>
+            <div class="flex space-x-4">
+                <input @bind="researchTopic" placeholder="例: AIによる医療画像診断の最新動向"
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       disabled="@isResearching" />
+                <button @onclick="StartResearch" disabled="@(isResearching || string.IsNullOrWhiteSpace(researchTopic))"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    @if (isResearching)
+                    {
+                        <span class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                                 fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                                </circle>
+                                <path class="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                            調査中...
+                        </span>
+                    }
+                    else
+                    {
+                        <span>調査開始</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Display -->
+        @if (isResearching || progressHistory.Any())
+        {
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">調査進行状況</h3>
+                <div class="space-y-4">
+                    @foreach (var step in progressHistory)
+                    {
+                        <div class="border-l-4 @(GetStepBorderColor(step.Type)) pl-4 py-2">
+                            <div class="flex items-center mb-2">
+                                <span class="@(GetStepIconColor(step.Type)) mr-2">@GetStepIcon(step.Type)</span>
+                                <h4 class="font-medium text-gray-900">@GetStepTitle(step.Type)</h4>
+                                <span class="ml-auto text-sm text-gray-500">@step.Timestamp.ToString("HH:mm:ss")</span>
+                            </div>
+                            <div class="text-gray-700 text-sm mt-2">
+                                @((MarkupString)GetStepContent(step))
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Final Research Report -->
+        @if (ResearchResult != null)
+        {
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4">調査レポート</h3>
+
+                <hr class="my-6 border-gray-200" />
+
+                <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">調査トピック</h4>
+                <p class="text-gray-700 mb-4">@ResearchResult.ResearchTopic</p>
+
+                <hr class="my-6 border-gray-200" />
+
+                <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">調査サマリー</h4>
+                <div class="prose max-w-none">
+                    @((MarkupString)(!string.IsNullOrEmpty(ResearchResult.Summary) ? Markdown.ToHtml(ResearchResult.Summary) : ""))
+                </div>
+
+                <hr class="my-6 border-gray-200" />
+
+                @if (ResearchResult.Sources.Any())
+                {
+                    <h4 class="text-lg font-semibold text-gray-900 mt-6 mb-2">参考文献</h4>
+                    <ul class="list-disc list-inside mb-6">
+                        @foreach (var source in ResearchResult.Sources)
+                        {
+                            <li>
+                                <a href="@source.Url" target="_blank" class="text-blue-600 hover:underline">
+                                    @source.Title
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <!-- Images Section -->
+                @if (ResearchResult.Images.Any())
+                {
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">関連画像</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            @foreach (var image in ResearchResult.Images)
+                            {
+                                <div class="rounded-lg overflow-hidden shadow-md">
+                                    <img src="@image" alt="Research Image" class="w-full h-auto object-cover" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private string researchTopic = "";
+    private bool isResearching = false;
+    private ResearchResult? ResearchResult => progressHistory
+        .OfType<ResearchCompleteProgress>()
+        .Select(x => new ResearchResult
+        {
+            ResearchTopic = _currentResearchTopic,
+            Summary = x.FinalSummary ?? "",
+            Images = x.Images,
+            Sources = x.Sources,
+        })
+        .FirstOrDefault();
+    private string _currentResearchTopic = "";
+    private List<ProgressBase> progressHistory = [];
+
+    private async Task StartResearch()
+    {
+        if (isResearching) return;
+        try
+        {
+            string userId = Guid.NewGuid().ToString();
+            progressHistory.Clear();
+            _currentResearchTopic = researchTopic;
+            isResearching = true;
+            await foreach (var message in DeepResearchClient.StartDeepResearchAsync(userId, researchTopic, 3))
+            {
+                progressHistory.Add(message);
+                await InvokeAsync(async () =>
+                {
+                    StateHasChanged();
+                    await JSRuntime.InvokeVoidAsync("scrollToBottom");
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "調査開始エラー: {errorMessage}", ex.Message);
+        }
+        finally
+        {
+            isResearching = false;
+        }
+    }
+
+    private string GetStepContent(ProgressBase message)
+    {
+        var type = message.Type;
+        var content = "";
+
+        switch (type)
+        {
+            case ProgressTypes.Thinking:
+                var thinkingProgress = DeserializeProgressData<ThinkingProgress>(message);
+                content = thinkingProgress?.Message ?? "";
+                break;
+
+            case ProgressTypes.GenerateQuery:
+                var queryProgress = DeserializeProgressData<QueryGenerationProgress>(message);
+                if (queryProgress != null)
+                {
+                    content = $"<strong>検索クエリ:</strong> {queryProgress.Query}<br><strong>根拠:</strong> {queryProgress.Rationale}";
+                }
+                break;
+
+            case ProgressTypes.Routing:
+                var routingProgress = DeserializeProgressData<RoutingProgress>(message);
+                if (routingProgress != null)
+                {
+                    var decisionText = routingProgress.Decision switch
+                    {
+                        RoutingDecision.Continue => "調査を続行",
+                        RoutingDecision.Finalize => "調査を完了",
+                        RoutingDecision.RetrySearch => "再検索",
+                        _ => routingProgress.Decision.ToString()
+                    };
+
+                    content = routingProgress.Decision switch
+                    {
+                        RoutingDecision.RetrySearch => $"<strong>次の処理を判断:</strong> {decisionText} (リトライ回数：{routingProgress.LoopCount + 1})",
+                        _ => $"<strong>次の処理を判断:</strong> {decisionText} (ループ {routingProgress.LoopCount + 1})"
+                    };
+                }
+                break;
+
+            case ProgressTypes.WebResearch:
+                var webResearchProgress = DeserializeProgressData<WebResearchProgress>(message);
+                if (webResearchProgress != null)
+                {
+                    content = $"<strong>検索結果:</strong> {webResearchProgress.Sources.Count} 件のソースを発見";
+                }
+                break;
+
+            case ProgressTypes.Summarize:
+                var summarizeProgress = DeserializeProgressData<SummarizeProgress>(message);
+                if (summarizeProgress != null)
+                {
+                    var summaryText = summarizeProgress.Summary;
+                    // 長い要約の場合は最初の200文字のみ表示
+                    if (summaryText.Length > 200)
+                    {
+                        summaryText = summaryText.Substring(0, 200) + "...";
+                    }
+                    content = $"<strong>要約:</strong><br>{summaryText}";
+                }
+                break;
+
+            case ProgressTypes.Reflection:
+                var reflectionProgress = DeserializeProgressData<ReflectionProgress>(message);
+                if (reflectionProgress != null)
+                {
+                    content = $"<strong>知識ギャップ:</strong> {reflectionProgress.KnowledgeGap}<br><strong>次の検索クエリ:</strong> {reflectionProgress.Query}";
+                }
+                break;
+
+            case ProgressTypes.Finalize:
+                var finalizeProgress = DeserializeProgressData<FinalizeProgress>(message);
+                if (finalizeProgress != null)
+                {
+                    content = "<strong>最終レポートを準備中...</strong>";
+                }
+                break;
+
+            case ProgressTypes.ResearchComplete:
+                var researchCompleteProgress = DeserializeProgressData<ResearchCompleteProgress>(message);
+                if (researchCompleteProgress != null)
+                {
+                    content = "<strong>調査が完了しました！</strong>";
+                }
+                break;
+
+            case ProgressTypes.Error:
+                var errorProgress = DeserializeProgressData<ErrorProgress>(message);
+                if (errorProgress != null)
+                {
+                    content = $"<strong>エラー:</strong> {errorProgress.Message}";
+                }
+                break;
+        }
+
+        return content;
+
+    }
+
+    private T? DeserializeProgressData<T>(ProgressBase progressMessage) where T : ProgressBase
+    {
+        try
+        {
+            return progressMessage as T;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "進行状況の型変換エラー ({typeName}): {errorMessage}", typeof(T).Name, ex.Message);
+            return null;
+        }
+    }
+
+    private string GetStepBorderColor(string type) => type switch
+    {
+        ProgressTypes.Thinking => "border-yellow-400",
+        ProgressTypes.GenerateQuery => "border-blue-400",
+        ProgressTypes.Routing => "border-gray-400",
+        ProgressTypes.WebResearch => "border-purple-400",
+        ProgressTypes.Summarize => "border-green-400",
+        ProgressTypes.Reflection => "border-orange-400",
+        ProgressTypes.Finalize => "border-indigo-400",
+        ProgressTypes.ResearchComplete => "border-green-500",
+        "error" => "border-red-400",
+        _ => "border-gray-400"
+    };
+
+    private string GetStepIconColor(string type) => type switch
+    {
+        ProgressTypes.Thinking => "text-yellow-500",
+        ProgressTypes.GenerateQuery => "text-blue-500",
+        ProgressTypes.Routing => "text-gray-500",
+        ProgressTypes.WebResearch => "text-purple-500",
+        ProgressTypes.Summarize => "text-green-500",
+        ProgressTypes.Reflection => "text-orange-500",
+        ProgressTypes.Finalize => "text-indigo-500",
+        ProgressTypes.ResearchComplete => "text-green-600",
+        "error" => "text-red-500",
+        _ => "text-gray-500"
+    };
+
+    private string GetStepIcon(string type) => type switch
+    {
+        ProgressTypes.Thinking => "💭",
+        ProgressTypes.GenerateQuery => "🔍",
+        ProgressTypes.Routing => "🔀",
+        ProgressTypes.WebResearch => "🌐",
+        ProgressTypes.Summarize => "📝",
+        ProgressTypes.Reflection => "🤔",
+        ProgressTypes.Finalize => "📋",
+        ProgressTypes.ResearchComplete => "✅",
+        "error" => "❌",
+        _ => "📄"
+    };
+
+    private string GetStepTitle(string type) => type switch
+    {
+        ProgressTypes.Thinking => "思考中",
+        ProgressTypes.GenerateQuery => "検索クエリ生成",
+        ProgressTypes.Routing => "処理のルーティング",
+        ProgressTypes.WebResearch => "Web検索",
+        ProgressTypes.Summarize => "要約作成",
+        ProgressTypes.Reflection => "反省・知識ギャップ分析",
+        ProgressTypes.Finalize => "最終レポート作成",
+        ProgressTypes.ResearchComplete => "調査完了",
+        "error" => "エラー",
+        _ => "処理中"
+    };
+}

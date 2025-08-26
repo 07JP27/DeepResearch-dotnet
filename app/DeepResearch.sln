@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.DurableFunctio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.DurableFunctions.AppHost", "DurableFunctions\DeepResearch.DurableFunctions.AppHost\DeepResearch.DurableFunctions.AppHost.csproj", "{D3DD72FF-F52B-084D-E409-CFE42B0D16D5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepResearch.DurableFunctions.Web", "DurableFunctions\DeepResearch.DurableFunctions.Web\DeepResearch.DurableFunctions.Web.csproj", "{8335CB49-8B7E-AAF9-7F81-20D854EB4856}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{D3DD72FF-F52B-084D-E409-CFE42B0D16D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3DD72FF-F52B-084D-E409-CFE42B0D16D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3DD72FF-F52B-084D-E409-CFE42B0D16D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8335CB49-8B7E-AAF9-7F81-20D854EB4856}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8335CB49-8B7E-AAF9-7F81-20D854EB4856}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8335CB49-8B7E-AAF9-7F81-20D854EB4856}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8335CB49-8B7E-AAF9-7F81-20D854EB4856}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +73,7 @@ Global
 		{8D634A9D-E888-4C77-9995-4FACC6BCCDD8} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
 		{85F67FC1-CB9B-446D-9D92-E6403E228D17} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
 		{D3DD72FF-F52B-084D-E409-CFE42B0D16D5} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
+		{8335CB49-8B7E-AAF9-7F81-20D854EB4856} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D75B0AAB-498C-4295-8CB5-47FAF74B587E}
