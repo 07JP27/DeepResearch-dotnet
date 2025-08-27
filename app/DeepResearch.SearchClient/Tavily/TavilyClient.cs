@@ -81,7 +81,7 @@ public class TavilyClient : ITavilyClient
         // Remove null values
         var filteredData = requestData.Where(kvp => kvp.Value != null).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-        return await SendRequestAsync<TavilySearchResult>("/search", filteredData, Math.Min(timeout, 120), cancellationToken).ConfigureAwait(false);
+        return await SendRequestAsync<TavilySearchResult>("/search", filteredData, Math.Min(timeout, 120), cancellationToken);
     }
 
 
@@ -95,8 +95,8 @@ public class TavilyClient : ITavilyClient
             var json = JsonSerializer.Serialize(data, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using var response = await _httpClient.PostAsync(endpoint, content, cts.Token).ConfigureAwait(false);
-            var responseContent = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+            using var response = await _httpClient.PostAsync(endpoint, content, cts.Token);
+            var responseContent = await response.Content.ReadAsStringAsync(cts.Token);
 
             if (response.IsSuccessStatusCode)
             {

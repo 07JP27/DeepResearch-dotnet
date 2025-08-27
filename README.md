@@ -19,10 +19,11 @@ DeepResearch .NET is an AI-driven research tool with the following features:
 ```
 DeepResearch-dotnet/
 └── app/
-    ├── DeepResearch.Core -----------> Core library for DeepResearch
-    ├── DeepResearch.SearchClient ---> Search client for retrieving information for DeepResearch
-    ├── DeepResearch.Console---------> Sample console application
-    └── DeepResearch.Web-------------> Sample web application UI
+    ├── DeepResearch.Core -------------------> Core library for DeepResearch
+    ├── DeepResearch.SearchClient ----------> Search client for retrieving information for DeepResearch
+    ├── DeepResearch.Console----------------> Sample console application
+    ├── DeepResearch.Web--------------------> Sample web application UI
+    └── DurableFunctions -------------------> .NET Aspire-based projects (Durable Functions backend + Blazor frontend)
 ```
 
 ## Prerequisites
@@ -54,6 +55,16 @@ DeepResearch-dotnet/
    ```
 
 ## Usage
+
+### Durable Functions (optional)
+
+If you anticipate many research iterations or want server-side orchestration with reliable progress streaming, use the .NET Aspire-based Durable Functions setup under `app/DurableFunctions/`.
+
+- Backend: Azure Functions (Durable Functions, .NET isolated)
+- Frontend: ASP.NET Core Blazor (server components)
+- Real-time progress: Azure SignalR Service (Serverless hub)
+
+For setup, configuration, and run instructions, see `app/DurableFunctions/README.md`.
 
 ```csharp
 

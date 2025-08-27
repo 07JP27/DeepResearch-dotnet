@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.4.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>862a0309-a5c7-4b60-a6e2-44044a72b199</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.1" />
+    <PackageReference Include="Aspire.Hosting.Azure.Functions" Version="(9.4-*,9.5]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeepResearch.DurableFunctions.Web\DeepResearch.DurableFunctions.Web.csproj" />
+    <ProjectReference Include="..\DeepResearch.DurableFunctions\DeepResearch.DurableFunctions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -19,10 +19,11 @@ DeepResearch .NET は、以下の特徴を持つ AI 駆動の調査ツールで�
 ```
 DeepResearch-dotnet/
 └── app/
-    ├── DeepResearch.Core -----------> DeepResearchのコアライブラリ
-    ├── DeepResearch.SearchClient ---> DeepResearchを行うために情報を取得するための検索クライアント
-    ├── DeepResearch.Console---------> サンプルのコンソールアプリケーション
-    └── DeepResearch.Web-------------> サンプルのWebアプリケーションのUI
+    ├── DeepResearch.Core -------------------> DeepResearchのコアライブラリ
+    ├── DeepResearch.SearchClient ----------> DeepResearchを行うために情報を取得するための検索クライアント
+    ├── DeepResearch.Console----------------> サンプルのコンソールアプリケーション
+    ├── DeepResearch.Web--------------------> サンプルのWebアプリケーションのUI
+    └── DurableFunctions -------------------> .NET Aspire 構成 (Durable Functions バックエンド + Blazor フロントエンド)
 ```
 
 ## 事前準備
@@ -52,6 +53,16 @@ DeepResearch-dotnet/
      }
    }
    ```
+
+### Durable Functions（任意）
+
+多くの反復回数が必要なケースや、サーバー側で耐久的にオーケストレーションしたい場合は、`app/DurableFunctions/` 配下の .NET Aspire ベースの Durable Functions 構成を利用できます。
+
+- バックエンド: Azure Functions（Durable Functions, .NET Isolated）
+- フロントエンド: ASP.NET Core Blazor（Server Components）
+- リアルタイム進捗: Azure SignalR Service（Serverless Hub）
+
+セットアップや起動方法の詳細は `app/DurableFunctions/README_ja.md` を参照してください。
 
 ## 使い方
 
