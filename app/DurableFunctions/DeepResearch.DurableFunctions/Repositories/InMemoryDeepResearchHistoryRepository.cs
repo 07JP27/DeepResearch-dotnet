@@ -1,10 +1,5 @@
 ﻿using DeepResearch.Core.Models;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DeepResearch.DurableFunctions.Repositories;
 public class InMemoryDeepResearchHistoryRepository : IDeepResearchHistoryRepository
@@ -13,35 +8,37 @@ public class InMemoryDeepResearchHistoryRepository : IDeepResearchHistoryReposit
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ProgressBase>> _store =
         new(StringComparer.Ordinal);
 
-    public ValueTask AddProgressAsync(string sessionId, string progressId, ProgressBase progress, CancellationToken cancellationToken = default)
+    public ValueTask AddProgressAsync(ProgressKey progressKey, ProgressBase progress, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(progressId);
+        ArgumentNullException.ThrowIfNull(progressKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(progressKey.SessionId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(progressKey.ProgressId);
         ArgumentNullException.ThrowIfNull(progress);
 
-        var sessionDict = _store.GetOrAdd(sessionId, static _ => new ConcurrentDictionary<string, ProgressBase>(StringComparer.Ordinal));
+        var sessionDict = _store.GetOrAdd(progressKey.SessionId, static _ => new ConcurrentDictionary<string, ProgressBase>(StringComparer.Ordinal));
         // Upsert behavior: overwrite if same progressId exists
-        sessionDict[progressId] = progress;
+        sessionDict[progressKey.ProgressId] = progress;
 
         return ValueTask.CompletedTask;
     }
 
-    public ValueTask<ProgressBase> GetProgressAsync(string sessionId, string progressId, CancellationToken cancellationToken = default)
+    public ValueTask<ProgressBase?> GetProgressAsync(ProgressKey progressKey, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(progressId);
+        ArgumentNullException.ThrowIfNull(progressKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(progressKey.SessionId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(progressKey.ProgressId);
 
-        if (!_store.TryGetValue(sessionId, out var sessionDict) ||
-            !sessionDict.TryGetValue(progressId, out var progress))
+        if (!_store.TryGetValue(progressKey.SessionId, out var sessionDict) ||
+            !sessionDict.TryGetValue(progressKey.ProgressId, out var progress))
         {
-            throw new KeyNotFoundException($"Progress not found. sessionId='{sessionId}', progressId='{progressId}'.");
+            return ValueTask.FromResult<ProgressBase?>(null);
         }
 
-        return ValueTask.FromResult(progress);
+        return ValueTask.FromResult<ProgressBase?>(progress);
     }
 
     public ValueTask<ProgressBase[]> GetProgressesBySessionIdAsync(string sessionId, CancellationToken cancellationToken = default)
