@@ -41,11 +41,11 @@ public class NotifyProgressActivity(IServiceProvider serviceProvider,
         try
         {
             await historyRepository.AddProgressAsync(args.ProgressKey, args.Progress.Progress);
-            await Clients.User(args.ProgressKey.SessionId).SendAsync("progress", JsonSerializer.Serialize(args.Progress, JsonSerializerOptions.Web));
+            await Clients.User(args.ProgressKey.SessionId).SendAsync("progress", args.ProgressKey);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error notifying user {UserId} with progress: {Progress}", 
+            logger.LogError(ex, "Error notifying user {ProgressKey} with progress: {Progress}", 
                 args.ProgressKey, 
                 args.Progress.Progress.Type);
             throw;
