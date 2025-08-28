@@ -33,7 +33,7 @@ public static class DeepResearchOrchestrator
         {
             await context.CallActivityAsync(
                 nameof(NotifyProgressActivity),
-                new NotifyProgressArguments(args.SessionId, new(update)),
+                new NotifyProgressArguments(new(args.SessionId, context.NewGuid().ToString()), new(update)),
                 DefaultTaskOptions);
         });
         return await deepResearchService.RunResearchAsync(args.Topic,

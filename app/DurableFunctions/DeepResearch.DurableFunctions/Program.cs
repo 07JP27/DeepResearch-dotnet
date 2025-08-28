@@ -11,6 +11,7 @@ using Microsoft.Extensions.AI;
 using DeepResearch.SearchClient.Tavily;
 using DeepResearch.Core.SearchClient;
 using DeepResearch.DurableFunctions.SignalR;
+using DeepResearch.DurableFunctions.Repositories;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 builder.Configuration.AddUserSecrets<Program>();
@@ -50,5 +51,8 @@ builder.Services.AddKeyedScoped<ISearchClient>(
         var options = sp.GetRequiredService<IOptions<DeepResearchAppOptions>>().Value;
         return new TavilySearchClient(sp.GetRequiredService<ITavilyClient>());
     });
+
+// In-memory repository for demo purposes. Replace with a persistent implementation as needed.
+builder.Services.AddSingleton<IDeepResearchHistoryRepository, InMemoryDeepResearchHistoryRepository>();
 
 builder.Build().Run();
