@@ -1,7 +1,5 @@
 ﻿using DeepResearch.Core.Models;
 using DeepResearch.DurableFunctions.Repositories;
-using System.Threading;
-using Xunit;
 
 namespace DeepResearch.DurableFunctions.Test.Repositories;
 
