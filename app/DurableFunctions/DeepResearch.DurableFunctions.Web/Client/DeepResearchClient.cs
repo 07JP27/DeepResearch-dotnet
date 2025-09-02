@@ -4,6 +4,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Channels;
+using System.Net.Http.Json;
 
 namespace DeepResearch.DurableFunctions.Web.Client;
 
@@ -54,12 +55,22 @@ public class DeepResearchClient(HttpClient httpClient, IConfiguration configurat
             };
 
             // 3) Subscribe to progress messages
-            progressSubscription = connection.On("progress", async (string jsonPayload) =>
+            progressSubscription = connection.On("progress", async (ProgressKey progressKey) =>
             {
                 try
                 {
-                    var envelope = JsonSerializer.Deserialize<ProgressEnvelope>(jsonPayload, JsonSerializerOptions.Web)
-                        ?? throw new InvalidOperationException($"Invalid Json payload: {jsonPayload}");
+                    // GetProgressFunction のエンドポイントから進捗を取得（シンプルな実装: リトライなし）
+                    var envelope = await httpClient.GetFromJsonAsync<ProgressEnvelope>(
+                        BuildProgressUrl(progressKey),
+                        JsonSerializerOptions.Web,
+                        cancellationToken);
+
+                    if (envelope is null)
+                    {
+                        // 取得できなければスキップ
+                        return;
+                    }
+
                     // Forward to channel and complete on terminal message
                     if (envelope.Progress is ResearchCompleteProgress)
                     {
@@ -130,4 +141,7 @@ public class DeepResearchClient(HttpClient httpClient, IConfiguration configurat
 
         throw new InvalidOperationException($"Real base address not found for {httpClient.BaseAddress}.");
     }
+
+    private string BuildProgressUrl(ProgressKey key)
+        => $"api/progress/{WebUtility.UrlEncode(key.SessionId)}/{WebUtility.UrlEncode(key.ProgressId)}";
 }

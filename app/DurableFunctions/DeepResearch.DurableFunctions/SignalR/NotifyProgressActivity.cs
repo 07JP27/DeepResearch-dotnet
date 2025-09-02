@@ -5,11 +5,14 @@ using Microsoft.Azure.Functions.Worker.SignalRService;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using DeepResearch.DurableFunctions.Repositories;
 
 namespace DeepResearch.DurableFunctions.SignalR;
 
 [SignalRConnection]
-public class NotifyProgressActivity(IServiceProvider serviceProvider, ILogger<NotifyProgressActivity> logger) : ServerlessHub(serviceProvider)
+public class NotifyProgressActivity(IServiceProvider serviceProvider, 
+    IDeepResearchHistoryRepository historyRepository,
+    ILogger<NotifyProgressActivity> logger) : ServerlessHub(serviceProvider)
 {
     [Function("negotiate")]
     public async Task<HttpResponseData> Negotiate(
@@ -32,17 +35,18 @@ public class NotifyProgressActivity(IServiceProvider serviceProvider, ILogger<No
     [Function(nameof(NotifyProgressActivity))]
     public async Task Run([ActivityTrigger] NotifyProgressArguments args)
     {
-        logger.LogInformation("Notifying user {UserId} with progress: {Progress}", 
-            args.SessionId, 
+        logger.LogInformation("Notifying user {ProgressKey} with progress: {Progress}", 
+            args.ProgressKey, 
             args.Progress.Progress.Type);
         try
         {
-            await Clients.User(args.SessionId).SendAsync("progress", JsonSerializer.Serialize(args.Progress, JsonSerializerOptions.Web));
+            await historyRepository.AddProgressAsync(args.ProgressKey, args.Progress.Progress);
+            await Clients.User(args.ProgressKey.SessionId).SendAsync("progress", args.ProgressKey);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error notifying user {UserId} with progress: {Progress}", 
-                args.SessionId, 
+            logger.LogError(ex, "Error notifying user {ProgressKey} with progress: {Progress}", 
+                args.ProgressKey, 
                 args.Progress.Progress.Type);
             throw;
         }
